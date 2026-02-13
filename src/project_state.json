@@ -1,0 +1,109 @@
+{
+  "schemaVersion": "1.0.0",
+  "projectStateVersion": 5,
+  "summary": "Build a mobile-friendly DApp/dashboard for a Binance Smart Chain (BSC) multi-token vault smart contract, allowing wallet connection and vault interactions (view balances, deposit/withdraw tokens and BNB) using the provided contract address and ABI.",
+  "architectural_notes": [
+    "Target Binance Smart Chain and interact with the deployed vault contract via its ABI.",
+    "Design UI to be mobile-first and handle missing injected provider (window.ethereum) gracefully (e.g., show instructions to open in MetaMask)."
+  ],
+  "known_issues": [
+    "Draft/preview build is not working (user reports it does not load/work on device)."
+  ],
+  "isFixRequest": true,
+  "existing_features": [
+    {
+      "id": "feature-ensure-the-dapp-connects-to-and-interacts-with-the-binance-smart-chain-vault-contract-at-address-0xd2e7da1e8e2cda1512a5cc9d1c477d95599f0ec4-using-the-provided-abi-methods-bnbbalance-tokenbalance-address-deposittoken-address-uint256-withdrawbnb-address-uint256-and-withdrawtoken-address-address-uint256",
+      "title": "Ensure the dApp connects to and interacts with the Binance Smart Chain vault contract at address `0xd2e7DA1e8E2cda1512A5CC9d1C477D95599f0eC4` using the provided ABI methods: `bnbBalance()`, `tokenBalance(address)`, `depositToken(address,uint256)`, `withdrawBNB(address,uint256)`, and `withdrawToken(address,address,uint256)`.",
+      "reqIds": [
+        "REQ-1"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-fix-contract-call-encoding-decoding-and-numeric-handling-to-be-safe-for-large-uint256-values-use-bigint-for-parsing-rpc-hex-results-and-for-converting-user-entered-amounts-to-wei-and-ensure-abi-encoding-correctly-handles-address-and-uint256-parameters-without-relying-on-parseint-or-double-padding",
+      "title": "Fix contract call encoding/decoding and numeric handling to be safe for large `uint256` values: use `BigInt` for parsing RPC hex results and for converting user-entered amounts to wei, and ensure ABI encoding correctly handles `address` and `uint256` parameters without relying on `parseInt` or double-padding.",
+      "reqIds": [
+        "REQ-2"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-implement-a-working-watch-list-for-token-balances-when-a-user-adds-a-bep20-token-address-in-the-balances-tab-persist-it-in-state-and-refetch-to-show-that-token-s-tokenbalance-address-include-the-ability-to-remove-a-watched-token-persist-the-watch-list-locally-e-g-localstorage-so-it-survives-page-refresh",
+      "title": "Implement a working “watch list” for token balances: when a user adds a BEP20 token address in the Balances tab, persist it in state and refetch to show that token’s `tokenBalance(address)`; include the ability to remove a watched token; persist the watch list locally (e.g., localStorage) so it survives page refresh.",
+      "reqIds": [
+        "REQ-3"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-improve-mobile-wallet-compatibility-and-fallback-ux-if-no-injected-provider-is-detected-no-window-ethereum-show-mobile-specific-guidance-to-open-the-dapp-in-the-metamask-mobile-in-app-browser-and-keep-the-existing-install-link-if-a-provider-exists-but-the-chain-is-not-bsc-provide-a-clear-actionable-prompt-and-keep-one-tap-network-switching-to-bsc",
+      "title": "Improve mobile wallet compatibility and fallback UX: if no injected provider is detected (no `window.ethereum`), show mobile-specific guidance to open the dApp in the MetaMask mobile in-app browser (and keep the existing install link). If a provider exists but the chain is not BSC, provide a clear, actionable prompt and keep one-tap network switching to BSC.",
+      "reqIds": [
+        "REQ-4"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-make-the-web3-layer-internally-consistent-by-implementing-callcontract-and-sendtransaction-in-useweb3-currently-placeholders-and-refactor-vault-reads-writes-to-use-those-functions-instead-of-duplicating-direct-window-ethereum-request-logic-in-multiple-hooks",
+      "title": "Make the Web3 layer internally consistent by implementing `callContract` and `sendTransaction` in `useWeb3` (currently placeholders) and refactor vault reads/writes to use those functions (instead of duplicating direct `window.ethereum.request` logic in multiple hooks).",
+      "reqIds": [
+        "REQ-5"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-apply-a-coherent-visual-theme-optimized-for-mobile-readability-and-touch-targets-across-the-dashboard-colors-typography-spacing-and-enforce-it-consistently-across-header-wallet-connect-tabs-and-forms-avoid-a-blue-purple-primary-palette",
+      "title": "Apply a coherent visual theme optimized for mobile readability and touch targets across the dashboard (colors, typography, spacing) and enforce it consistently across Header, wallet connect, tabs, and forms. Avoid a blue/purple primary palette.",
+      "reqIds": [
+        "REQ-6"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-ensure-the-app-renders-without-crashing-by-wrapping-the-react-app-in-the-existing-web3provider-so-that-all-components-using-useweb3-e-g-dashboard-walletconnect-have-the-required-context",
+      "title": "Ensure the app renders without crashing by wrapping the React app in the existing `Web3Provider` so that all components using `useWeb3()` (e.g., `Dashboard`, `WalletConnect`) have the required context.",
+      "reqIds": [
+        "REQ-7"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-a-user-visible-error-fallback-for-unexpected-runtime-exceptions-e-g-missing-providers-or-other-uncaught-errors-so-the-preview-shows-a-readable-english-error-message-and-a-clear-recovery-action-e-g-reload-instead-of-failing-silently",
+      "title": "Add a user-visible error fallback for unexpected runtime exceptions (e.g., missing providers or other uncaught errors) so the preview shows a readable English error message and a clear recovery action (e.g., reload) instead of failing silently.",
+      "reqIds": [
+        "REQ-8"
+      ],
+      "version": 1
+    }
+  ],
+  "new_feature_requests": [
+    {
+      "id": "AR-1",
+      "summary": "Mobile-friendly BSC vault dashboard DApp that connects to the existing vault contract (0xd2e7DA1e8E2cda1512A5CC9d1C477D95599f0eC4) using the provided ABI",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-2",
+      "summary": "Wallet connection flow for mobile (MetaMask mobile/in-app browser compatibility; optional WalletConnect) with clear fallback UI when no provider is available",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-3",
+      "summary": "Read-only vault views: display vault BNB balance (bnbBalance) and token balance lookup (tokenBalance(token))",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-4",
+      "summary": "Write interactions: depositToken(token, amount), withdrawBNB(to, amount), withdrawToken(token, to, amount) via connected wallet",
+      "reqIds": [],
+      "status": "pending"
+    }
+  ],
+  "gameProjectType": "none",
+  "projectName": "Binance Smart Chain Vault Dashboard",
+  "clarification_mode": "instant",
+  "clarification_rounds": 0
+}

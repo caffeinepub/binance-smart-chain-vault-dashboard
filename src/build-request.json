@@ -1,0 +1,66 @@
+{
+  "kind": "build_request",
+  "title": "Fix draft/preview not loading by wiring Web3Provider and adding a safe crash screen",
+  "priority": "high",
+  "requirements": [
+    {
+      "id": "REQ-7",
+      "text": "Ensure the app renders without crashing by wrapping the React app in the existing `Web3Provider` so that all components using `useWeb3()` (e.g., `Dashboard`, `WalletConnect`) have the required context.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-4"
+        ],
+        "quotes": [
+          "draft is not working"
+        ]
+      },
+      "acceptanceCriteria": [
+        "Opening the draft/preview no longer shows a blank screen or immediate runtime crash.",
+        "`useWeb3()` no longer throws `useWeb3 must be used within a Web3Provider` during initial render.",
+        "On load, the Dashboard displays either the initialization skeleton or the wallet connection UI, depending on environment."
+      ]
+    },
+    {
+      "id": "REQ-8",
+      "text": "Add a user-visible error fallback for unexpected runtime exceptions (e.g., missing providers or other uncaught errors) so the preview shows a readable English error message and a clear recovery action (e.g., reload) instead of failing silently.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-4"
+        ],
+        "quotes": [
+          "draft is not working"
+        ]
+      },
+      "acceptanceCriteria": [
+        "If an uncaught error occurs during render, the UI shows a friendly error card/page in English with a reload action.",
+        "The error fallback does not depend on editing any files in `frontend/src/components/ui` or other immutable paths.",
+        "Normal operation (no errors) is unaffected; the dashboard experience remains the same when no exception is thrown."
+      ]
+    }
+  ],
+  "constraints": [
+    "Do not edit files in immutable paths: `frontend/src/hooks/useInternetIdentity.ts`, `frontend/src/hooks/useInternetIdentity.tsx`, `frontend/src/hooks/useActor.ts`, `frontend/src/main.tsx`, `frontend/src/components/ui`, `frontend/src/main.tsx`.",
+    "Keep the backend as single-actor Motoko architecture; no new backend services."
+  ],
+  "nonGoals": [
+    "Adding WalletConnect or any new wallet providers (not requested).",
+    "Changing contract address/ABI or vault interaction logic.",
+    "Implementing new backend persistence or data models."
+  ],
+  "imageRequirements": {
+    "required": [],
+    "edits": []
+  },
+  "userProfileUpdate": {
+    "goalsToAdd": [],
+    "goalsToRemove": [],
+    "preferencesToAdd": [],
+    "preferencesToRemove": [],
+    "miscToAdd": [],
+    "miscToRemove": [],
+    "fieldsToSet": {},
+    "fieldsToDelete": []
+  }
+}

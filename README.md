@@ -1,2 +1,3 @@
-# binance-smart-chain-vault-dashboard
-Exported from Caffeine project: Binance Smart Chain Vault Dashboard
+## 
+
+To run app build and run docker image: `docker build -t app . docker run -it --network host app`

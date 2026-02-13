@@ -1,0 +1,44 @@
+{
+  "kind": "implementation_plan",
+  "version": "1.0",
+  "title": "Wire Web3Provider globally and add crash-safe runtime error fallback",
+  "requirements": [
+    {
+      "id": "REQ-7",
+      "summary": "Wrap the app with the existing Web3Provider so all useWeb3() consumers render safely in draft/preview.",
+      "acceptanceCriteria": [
+        "Opening the draft/preview no longer shows a blank screen or immediate runtime crash.",
+        "`useWeb3()` no longer throws `useWeb3 must be used within a Web3Provider` during initial render.",
+        "On load, the Dashboard displays either the initialization skeleton or the wallet connection UI, depending on environment."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/App.tsx",
+          "operation": "modify",
+          "description": "Wrap the existing app content in the existing Web3Provider from frontend/src/hooks/useWeb3.tsx so Dashboard and WalletConnect always have the required context. Keep existing ThemeProvider and Toaster behavior unchanged. Verify the component's usage instructions before implementing."
+        }
+      ]
+    },
+    {
+      "id": "REQ-8",
+      "summary": "Add a user-visible error fallback UI for unexpected runtime exceptions with a clear recovery action.",
+      "acceptanceCriteria": [
+        "If an uncaught error occurs during render, the UI shows a friendly error card/page in English with a reload action.",
+        "The error fallback does not depend on editing any files in `frontend/src/components/ui` or other immutable paths.",
+        "Normal operation (no errors) is unaffected; the dashboard experience remains the same when no exception is thrown."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/components/ErrorBoundary.tsx",
+          "operation": "create",
+          "description": "Create a reusable React error boundary component that catches render-time exceptions and renders a friendly fallback UI. The fallback should present a readable English message and a primary recovery action to reload the page, and may include an optional expandable details section for the error message/stack. Use shadcn-ui components (e.g., Card/Button/Alert) for consistent styling without modifying immutable `frontend/src/components/ui/*` files. Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/App.tsx",
+          "operation": "modify",
+          "description": "Wire the new ErrorBoundary around the app's rendered tree (inside existing providers) so unexpected runtime exceptions render the friendly crash screen instead of a blank page. Ensure normal operation is unaffected when no exception is thrown. Verify the component's usage instructions before implementing."
+        }
+      ]
+    }
+  ]
+}

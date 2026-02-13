@@ -1,0 +1,23 @@
+{
+  "frontend/src/App.tsx": "Main application component that wraps the dashboard with ThemeProvider, Web3Provider, ErrorBoundary, and Toaster for proper context initialization and error handling.",
+  "frontend/src/pages/Dashboard.tsx": "Main dashboard with mobile-optimized layout, clear MetaMask/network error states, actionable network switching, and touch-friendly tab navigation.",
+  "frontend/src/components/Header.tsx": "Application header with responsive branding, mobile-optimized text display, and touch-friendly theme toggle button meeting 44px minimum target size.",
+  "frontend/src/components/Footer.tsx": "Footer component with attribution and link to caffeine.ai.",
+  "frontend/src/components/WalletConnect.tsx": "Wallet connection component with mobile-specific MetaMask browser guidance, wrong-network detection with one-tap BSC switching, and touch-optimized buttons.",
+  "frontend/src/components/BalanceView.tsx": "Displays BNB and watched BEP20 token balances with persistent add/remove functionality, mobile-friendly touch targets, and real-time balance refetching.",
+  "frontend/src/components/DepositForm.tsx": "Token deposit form with mobile-friendly inputs and buttons, proper error handling, and clear user guidance for the approval + deposit flow.",
+  "frontend/src/components/WithdrawForm.tsx": "Tabbed withdraw form for BNB and tokens with mobile-optimized touch targets, optional recipient fields, and clear owner-only messaging.",
+  "frontend/src/components/ContractInfo.tsx": "Displays vault contract information including address, owner, network details, and available functions.",
+  "frontend/src/hooks/useWeb3.tsx": "Web3 context provider with MetaMask detection, mobile device detection, BSC network switching, and canonical callContract/sendTransaction methods for all EVM interactions.",
+  "frontend/src/hooks/useVaultBalances.ts": "Hook for fetching BNB and token balances from the vault using the canonical Web3 layer, BigInt-safe decoding, and integration with the watched tokens list.",
+  "frontend/src/hooks/useVaultOperations.ts": "Hook for vault deposit/withdraw operations using the canonical Web3 sendTransaction method with BigInt-safe amount encoding via parseUnits.",
+  "frontend/src/hooks/useVaultInfo.ts": "Hook for fetching vault owner address using the canonical Web3 callContract method with proper address decoding.",
+  "frontend/src/lib/contracts.ts": "Contract utilities with vault address, function signatures, and type-safe encoding/decoding methods using the new EVM helpers for proper ABI parameter handling.",
+  "frontend/src/hooks/useQueries.ts": "Placeholder file for React Query hooks (minimal as we're using Web3 directly).",
+  "frontend/src/index.css": "Global styles with OKLCH green-teal accent palette (non-blue/purple), mobile touch target optimization (44px minimum), and accessibility focus states.",
+  "frontend/src/main.tsx": "Application entry point that wraps the app with QueryClientProvider, InternetIdentityProvider, and Web3Provider for proper context initialization.",
+  "frontend/index.html": "HTML entry point with optimized viewport meta tags for mobile responsiveness and proper scaling.",
+  "frontend/src/lib/evm.ts": "EVM utility helpers for safe BigInt-based encoding/decoding of uint256 and address types, plus parseUnits/formatUnits for decimal-to-wei conversion without floating point precision loss.",
+  "frontend/src/hooks/useWatchedTokens.ts": "Hook managing a persistent list of watched token addresses with localStorage persistence, add/remove operations, and address validation.",
+  "frontend/src/components/ErrorBoundary.tsx": "React error boundary component that catches runtime exceptions and displays a friendly fallback UI with reload action and optional technical details."
+}

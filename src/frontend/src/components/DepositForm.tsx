@@ -6,7 +6,6 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { useVaultOperations } from '@/hooks/useVaultOperations';
-import { useVaultBalances } from '@/hooks/useVaultBalances';
 import { TokenSelectorInput } from '@/components/TokenSelectorInput';
 import TransactionHistory from '@/components/TransactionHistory';
 import { useTxHistory } from '@/hooks/useTxHistory';
@@ -25,7 +24,6 @@ export function DepositForm({ onSuccess }: DepositFormProps) {
   const [showHistory, setShowHistory] = useState(false);
 
   const { depositToken } = useVaultOperations();
-  const { bnbBalance, tokenBalances } = useVaultBalances(false);
   const { addEntry } = useTxHistory();
   const { sendTransaction } = useWeb3();
 
@@ -75,11 +73,8 @@ export function DepositForm({ onSuccess }: DepositFormProps) {
       const txHash = await depositToken(tokenAddress, amount);
       toast.success('Token deposit initiated');
 
-      // Find token symbol for history
-      const token = tokenBalances.find(
-        (t) => t.address.toLowerCase() === tokenAddress.toLowerCase()
-      );
-      const symbol = token?.symbol || tokenAddress.slice(0, 8);
+      // Use shortened address as fallback label for history
+      const symbol = tokenAddress.slice(0, 10) + '...';
 
       // Add to history
       addEntry('Deposit Token', symbol, amount, txHash);
@@ -98,14 +93,6 @@ export function DepositForm({ onSuccess }: DepositFormProps) {
 
   return (
     <div className="space-y-6">
-      {/* Vault Balance Display */}
-      <div className="p-4 rounded-lg bg-gradient-to-br from-primary/10 to-accent/10 border border-primary/20">
-        <div className="text-sm text-muted-foreground mb-1">Current Vault Balance</div>
-        <div className="text-2xl font-bold font-mono text-primary">
-          {parseFloat(bnbBalance).toFixed(6)} BNB
-        </div>
-      </div>
-
       {error && (
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>

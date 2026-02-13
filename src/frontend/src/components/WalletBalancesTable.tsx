@@ -1,4 +1,4 @@
-import { TrendingUp, Coins, AlertCircle } from 'lucide-react';
+import { TrendingUp, Wallet, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
@@ -17,7 +17,7 @@ interface TokenValuation {
   error?: string;
 }
 
-interface VaultBalancesTableProps {
+interface WalletBalancesTableProps {
   bnbBalance: string;
   bnbValuation: TokenValuation;
   tokenBalances: TokenBalance[];
@@ -25,21 +25,21 @@ interface VaultBalancesTableProps {
   isLoadingPrices: boolean;
 }
 
-export function VaultBalancesTable({
+export function WalletBalancesTable({
   bnbBalance,
   bnbValuation,
   tokenBalances,
   tokenValuations,
   isLoadingPrices,
-}: VaultBalancesTableProps) {
+}: WalletBalancesTableProps) {
   return (
     <Card className="border-primary/20">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Coins className="h-5 w-5 text-primary" />
-          Token Balances
+          <Wallet className="h-5 w-5 text-primary" />
+          Wallet Balances
         </CardTitle>
-        <CardDescription>Your vault holdings by token</CardDescription>
+        <CardDescription>Your connected wallet holdings</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
         {/* BNB Row */}
@@ -107,12 +107,12 @@ export function VaultBalancesTable({
           </>
         )}
 
-        {/* No additional tokens message */}
+        {/* No watched tokens message */}
         {tokenBalances.length === 0 && (
           <>
             <Separator />
             <div className="text-center py-4 text-muted-foreground text-sm">
-              No additional tokens in vault
+              No watched tokens. Only watched tokens are displayed here.
             </div>
           </>
         )}

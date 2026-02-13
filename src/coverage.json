@@ -1,60 +1,39 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-13T21:53:54.255Z",
+  "generatedAt": "2026-02-13T22:56:37.705Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
   },
   "requirements": {
-    "total": 3,
-    "implemented": 3,
+    "total": 2,
+    "implemented": 2,
     "items": [
       {
         "id": "REQ-1",
-        "summary": "Fix the live vault balance data-fetch/polling so it does not trigger repeated refresh loops and does not prevent the Wallet Connect UI from being shown when needed.",
+        "summary": "Remove the ZIP build export feature from the UI by deleting the \"Build Export\" section in the Diagnostics bar, including the download button, progress text, and the deployment instructions that reference downloading/extracting a ZIP.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/hooks/useVaultBalances.ts",
-          "frontend/src/components/BalanceView.tsx",
-          "frontend/src/pages/Dashboard.tsx"
+          "frontend/src/components/DiagnosticsBar.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/hooks/useVaultBalances.ts",
-          "frontend/src/components/BalanceView.tsx",
-          "frontend/src/pages/Dashboard.tsx"
+          "frontend/src/components/DiagnosticsBar.tsx"
         ]
       },
       {
         "id": "REQ-2",
-        "summary": "Move the Wallet Connect entry point to the top of the screen so users can always see a Wallet Connect button in the top area (above the hero/content), regardless of balance refresh behavior.",
+        "summary": "Remove the underlying ZIP export implementation so the frontend no longer generates or downloads ZIP files, including removing the usage of exportFrontendBuild/downloadBlob and any ZIP writer logic that is only used for this export.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/components/WalletConnectTopBar.tsx",
-          "frontend/src/components/Header.tsx",
-          "frontend/src/App.tsx",
-          "frontend/src/pages/Dashboard.tsx"
+          "frontend/src/lib/buildExport.ts",
+          "frontend/src/lib/zipWriter.ts",
+          "frontend/src/components/DiagnosticsBar.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/components/WalletConnectTopBar.tsx",
-          "frontend/src/components/Header.tsx",
-          "frontend/src/App.tsx",
-          "frontend/src/pages/Dashboard.tsx"
-        ]
-      },
-      {
-        "id": "REQ-3",
-        "summary": "Update the vault balances display to be explicitly token-wise: show a clear list/table where each row is a token label (BNB plus other tokens) with its balance.",
-        "status": "implemented",
-        "plannedFiles": [
-          "frontend/src/components/VaultBalancesTable.tsx",
-          "frontend/src/components/BalanceView.tsx",
-          "frontend/src/pages/Dashboard.tsx"
-        ],
-        "matchedFiles": [
-          "frontend/src/components/VaultBalancesTable.tsx",
-          "frontend/src/components/BalanceView.tsx",
-          "frontend/src/pages/Dashboard.tsx"
+          "frontend/src/lib/buildExport.ts",
+          "frontend/src/lib/zipWriter.ts",
+          "frontend/src/components/DiagnosticsBar.tsx"
         ]
       }
     ]
@@ -64,13 +43,9 @@
     "feature_evidence.json",
     "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
-    "frontend/src/App.tsx",
-    "frontend/src/components/BalanceView.tsx",
-    "frontend/src/components/Header.tsx",
-    "frontend/src/components/VaultBalancesTable.tsx",
-    "frontend/src/components/WalletConnectTopBar.tsx",
-    "frontend/src/hooks/useVaultBalances.ts",
-    "frontend/src/pages/Dashboard.tsx",
+    "frontend/src/components/DiagnosticsBar.tsx",
+    "frontend/src/lib/buildExport.ts",
+    "frontend/src/lib/zipWriter.ts",
     "project_state.json",
     "scratch/component-selection.json",
     "spec.md",

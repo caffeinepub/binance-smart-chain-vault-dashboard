@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from 'react';
 
 interface Web3ContextType {
   account: string | null;
@@ -44,7 +44,7 @@ export function Web3Provider({ children }: { children: ReactNode }) {
     checkMobile();
   }, []);
 
-  const switchToBSC = async () => {
+  const switchToBSC = useCallback(async () => {
     if (!window.ethereum) {
       throw new Error('EVM wallet is not installed');
     }
@@ -80,9 +80,9 @@ export function Web3Provider({ children }: { children: ReactNode }) {
         throw switchError;
       }
     }
-  };
+  }, []);
 
-  const connectWallet = async () => {
+  const connectWallet = useCallback(async () => {
     try {
       setError(null);
 
@@ -113,7 +113,7 @@ export function Web3Provider({ children }: { children: ReactNode }) {
       console.error('Error connecting wallet:', err);
       setError(err.message || 'Failed to connect wallet');
     }
-  };
+  }, [isMobile]);
 
   const disconnectWallet = useCallback(() => {
     setAccount(null);
@@ -124,7 +124,7 @@ export function Web3Provider({ children }: { children: ReactNode }) {
   /**
    * Extract a readable error message from nested provider error structures
    */
-  const extractErrorMessage = (error: any): string => {
+  const extractErrorMessage = useCallback((error: any): string => {
     // Handle raw 0x responses
     if (typeof error === 'string' && (error === '0x' || error.trim() === '0x')) {
       return 'Contract call reverted. The contract may not support this function.';
@@ -162,12 +162,12 @@ export function Web3Provider({ children }: { children: ReactNode }) {
       return msg;
     }
     return 'Contract call failed. Try again or check network connection.';
-  };
+  }, []);
 
   /**
    * Fallback method to call contract via direct JSON-RPC when wallet fails
    */
-  const callContractViaRPC = async (to: string, data: string): Promise<string> => {
+  const callContractViaRPC = useCallback(async (to: string, data: string): Promise<string> => {
     try {
       const response = await fetch(BSC_RPC_URL, {
         method: 'POST',
@@ -207,13 +207,13 @@ export function Web3Provider({ children }: { children: ReactNode }) {
     } catch (err: any) {
       throw new Error(extractErrorMessage(err));
     }
-  };
+  }, [extractErrorMessage]);
 
   /**
    * Get native balance via eth_getBalance
    * Uses injected provider if available, falls back to direct RPC
    */
-  const getNativeBalance = async (address: string): Promise<bigint> => {
+  const getNativeBalance = useCallback(async (address: string): Promise<bigint> => {
     try {
       // Try injected provider first if available
       if (window.ethereum) {
@@ -257,13 +257,13 @@ export function Web3Provider({ children }: { children: ReactNode }) {
     } catch (err: any) {
       throw new Error(extractErrorMessage(err));
     }
-  };
+  }, [extractErrorMessage]);
 
   /**
    * Call a contract method (read-only)
    * Uses injected provider if available, falls back to direct RPC
    */
-  const callContract = async (to: string, data: string): Promise<string> => {
+  const callContract = useCallback(async (to: string, data: string): Promise<string> => {
     try {
       // Try injected provider first if available
       if (window.ethereum) {
@@ -296,13 +296,13 @@ export function Web3Provider({ children }: { children: ReactNode }) {
     } catch (err: any) {
       throw new Error(extractErrorMessage(err));
     }
-  };
+  }, [callContractViaRPC, extractErrorMessage]);
 
   /**
    * Send a transaction (state-changing)
    * Requires connected wallet
    */
-  const sendTransaction = async (to: string, data: string, value: string = '0x0'): Promise<string> => {
+  const sendTransaction = useCallback(async (to: string, data: string, value: string = '0x0'): Promise<string> => {
     if (!window.ethereum) {
       throw new Error('EVM wallet is not installed');
     }
@@ -328,7 +328,7 @@ export function Web3Provider({ children }: { children: ReactNode }) {
     } catch (err: any) {
       throw new Error(extractErrorMessage(err));
     }
-  };
+  }, [account, extractErrorMessage]);
 
   // Initialize: check for existing connection and set up event listeners
   useEffect(() => {
@@ -417,24 +417,42 @@ export function Web3Provider({ children }: { children: ReactNode }) {
     };
   }, [disconnectWallet]);
 
+  // Memoize the context value to prevent unnecessary re-renders
+  const contextValue = useMemo(
+    () => ({
+      account,
+      chainId,
+      isConnected,
+      error,
+      isInitializing,
+      hasMetaMask,
+      isMobile,
+      connectWallet,
+      disconnectWallet,
+      switchToBSC,
+      callContract,
+      sendTransaction,
+      getNativeBalance,
+    }),
+    [
+      account,
+      chainId,
+      isConnected,
+      error,
+      isInitializing,
+      hasMetaMask,
+      isMobile,
+      connectWallet,
+      disconnectWallet,
+      switchToBSC,
+      callContract,
+      sendTransaction,
+      getNativeBalance,
+    ]
+  );
+
   return (
-    <Web3Context.Provider
-      value={{
-        account,
-        chainId,
-        isConnected,
-        error,
-        isInitializing,
-        hasMetaMask,
-        isMobile,
-        connectWallet,
-        disconnectWallet,
-        switchToBSC,
-        callContract,
-        sendTransaction,
-        getNativeBalance,
-      }}
-    >
+    <Web3Context.Provider value={contextValue}>
       {children}
     </Web3Context.Provider>
   );

@@ -2,12 +2,10 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-fix-the-live-vault-balance-data-fetch-polling-so-it-does-not-trigger-repeated-refresh-loops-and-does-not-prevent-the-wallet-connect-ui-from-being-shown-when-needed",
-      "featureTitle": "Fix the live vault balance data-fetch/polling so it does not trigger repeated refresh loops and does not prevent the Wallet Connect UI from being shown when needed.",
+      "featureId": "feature-remove-the-zip-build-export-feature-from-the-ui-by-deleting-the-build-export-section-in-the-diagnostics-bar-including-the-download-button-progress-text-and-the-deployment-instructions-that-reference-downloading-extracting-a-zip",
+      "featureTitle": "Remove the ZIP build export feature from the UI by deleting the \"Build Export\" section in the Diagnostics bar, including the download button, progress text, and the deployment instructions that reference downloading/extracting a ZIP.",
       "files": [
-        "frontend/src/components/BalanceView.tsx",
-        "frontend/src/hooks/useVaultBalances.ts",
-        "frontend/src/pages/Dashboard.tsx"
+        "frontend/src/components/DiagnosticsBar.tsx"
       ],
       "components": [
         "core-infrastructure@1.0.2",
@@ -22,13 +20,12 @@
       "confidence": "high"
     },
     {
-      "featureId": "feature-move-the-wallet-connect-entry-point-to-the-top-of-the-screen-so-users-can-always-see-a-wallet-connect-button-in-the-top-area-above-the-hero-content-regardless-of-balance-refresh-behavior",
-      "featureTitle": "Move the Wallet Connect entry point to the top of the screen so users can always see a Wallet Connect button in the top area (above the hero/content), regardless of balance refresh behavior.",
+      "featureId": "feature-remove-the-underlying-zip-export-implementation-so-the-frontend-no-longer-generates-or-downloads-zip-files-including-removing-the-usage-of-exportfrontendbuild-downloadblob-and-any-zip-writer-logic-that-is-only-used-for-this-export",
+      "featureTitle": "Remove the underlying ZIP export implementation so the frontend no longer generates or downloads ZIP files, including removing the usage of exportFrontendBuild/downloadBlob and any ZIP writer logic that is only used for this export.",
       "files": [
-        "frontend/src/App.tsx",
-        "frontend/src/components/Header.tsx",
-        "frontend/src/components/WalletConnectTopBar.tsx",
-        "frontend/src/pages/Dashboard.tsx"
+        "frontend/src/components/DiagnosticsBar.tsx",
+        "frontend/src/lib/buildExport.ts",
+        "frontend/src/lib/zipWriter.ts"
       ],
       "components": [
         "core-infrastructure@1.0.2",
@@ -39,26 +36,6 @@
       ],
       "testIds": [
         "REQ-2"
-      ],
-      "confidence": "high"
-    },
-    {
-      "featureId": "feature-update-the-vault-balances-display-to-be-explicitly-token-wise-show-a-clear-list-table-where-each-row-is-a-token-label-bnb-plus-other-tokens-with-its-balance",
-      "featureTitle": "Update the vault balances display to be explicitly token-wise: show a clear list/table where each row is a token label (BNB plus other tokens) with its balance.",
-      "files": [
-        "frontend/src/components/BalanceView.tsx",
-        "frontend/src/components/VaultBalancesTable.tsx",
-        "frontend/src/pages/Dashboard.tsx"
-      ],
-      "components": [
-        "core-infrastructure@1.0.2",
-        "shadcn-ui@1.0.0",
-        "build-template-react@1.0.0",
-        "initial-app@1.0.0",
-        "github-export-icp-cli@1.0.0"
-      ],
-      "testIds": [
-        "REQ-3"
       ],
       "confidence": "high"
     }

@@ -41,60 +41,68 @@ export function useBalanceValuations(
 
         if (bnbPriceResult.success && bnbPriceResult.price?.usd) {
           const bnbPriceUSD = bnbPriceResult.price.usd;
-          
-          // Calculate BNB valuation
           const bnbBalanceNum = Number(bnbBalanceRaw) / 1e18;
           const bnbUsdValue = bnbBalanceNum * bnbPriceUSD;
-          
+
           setBnbValuation({
-            usdValue: formatPrice(bnbUsdValue, 2),
+            usdValue: formatPrice(bnbUsdValue),
           });
 
           // Fetch token prices
           const newTokenValuations = new Map<string, Valuation>();
-          
-          for (const token of tokenBalances) {
-            if (!isMounted) break;
 
-            const tokenPriceResult = await fetchTokenPrice(token.address, bnbPriceUSD);
-            
-            if (tokenPriceResult.success && tokenPriceResult.price) {
-              const tokenBalanceNum = Number(token.balanceRaw) / Math.pow(10, token.decimals);
-              
-              const valuation: Valuation = {};
-              
-              if (tokenPriceResult.price.usd) {
-                const usdValue = tokenBalanceNum * tokenPriceResult.price.usd;
-                valuation.usdValue = formatPrice(usdValue, 2);
+          await Promise.all(
+            tokenBalances.map(async (token) => {
+              try {
+                const tokenPriceResult = await fetchTokenPrice(token.address, bnbPriceUSD);
+                
+                if (!isMounted) return;
+
+                if (tokenPriceResult.success && tokenPriceResult.price) {
+                  const tokenBalanceNum = Number(token.balanceRaw) / Math.pow(10, token.decimals);
+                  
+                  const valuation: Valuation = {};
+
+                  if (tokenPriceResult.price.usd) {
+                    const tokenUsdValue = tokenBalanceNum * tokenPriceResult.price.usd;
+                    valuation.usdValue = formatPrice(tokenUsdValue);
+                  }
+
+                  if (tokenPriceResult.price.bnb) {
+                    const tokenBnbValue = tokenBalanceNum * tokenPriceResult.price.bnb;
+                    valuation.bnbValue = formatPrice(tokenBnbValue, 4);
+                  }
+
+                  newTokenValuations.set(token.address, valuation);
+                } else {
+                  newTokenValuations.set(token.address, {
+                    error: tokenPriceResult.error || 'Price unavailable',
+                  });
+                }
+              } catch (err) {
+                console.error(`Error fetching price for ${token.address}:`, err);
+                newTokenValuations.set(token.address, {
+                  error: 'Price unavailable',
+                });
               }
-              
-              if (tokenPriceResult.price.bnb) {
-                const bnbValue = tokenBalanceNum * tokenPriceResult.price.bnb;
-                valuation.bnbValue = formatPrice(bnbValue, 4);
-              }
-              
-              newTokenValuations.set(token.address, valuation);
-            } else {
-              newTokenValuations.set(token.address, {
-                error: tokenPriceResult.error || 'Price unavailable',
-              });
-            }
-          }
-          
+            })
+          );
+
           if (isMounted) {
             setTokenValuations(newTokenValuations);
           }
         } else {
-          if (isMounted) {
-            setBnbValuation({
-              error: bnbPriceResult.error || 'Price unavailable',
-            });
-          }
+          // BNB price fetch failed
+          setBnbValuation({
+            error: bnbPriceResult.error || 'Price unavailable',
+          });
         }
-      } catch (error) {
-        console.error('Error fetching valuations:', error);
+      } catch (err) {
+        console.error('Error fetching valuations:', err);
         if (isMounted) {
-          setBnbValuation({ error: 'Failed to fetch prices' });
+          setBnbValuation({
+            error: 'Price unavailable',
+          });
         }
       } finally {
         if (isMounted) {
@@ -103,7 +111,12 @@ export function useBalanceValuations(
       }
     };
 
-    fetchValuations();
+    // Only fetch if we have balances
+    if (bnbBalanceRaw > 0n || tokenBalances.length > 0) {
+      fetchValuations();
+    } else {
+      setIsLoading(false);
+    }
 
     return () => {
       isMounted = false;

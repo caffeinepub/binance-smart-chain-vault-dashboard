@@ -1,34 +1,24 @@
 {
   "schemaVersion": "1.0.0",
   "projectStateVersion": 3,
-  "summary": "App with wallet connect and vault vault-balance UI, including live data fetch from BscScan.",
+  "summary": "New project",
   "architectural_notes": [],
-  "known_issues": [
-    "Live data fetch from BscScan is not working correctly, causing repeated refresh and Wallet Connect not showing."
-  ],
+  "known_issues": [],
   "isFixRequest": true,
   "existing_features": [
     {
-      "id": "feature-fix-the-live-vault-balance-data-fetch-polling-so-it-does-not-trigger-repeated-refresh-loops-and-does-not-prevent-the-wallet-connect-ui-from-being-shown-when-needed",
-      "title": "Fix the live vault balance data-fetch/polling so it does not trigger repeated refresh loops and does not prevent the Wallet Connect UI from being shown when needed.",
+      "id": "feature-remove-the-zip-build-export-feature-from-the-ui-by-deleting-the-build-export-section-in-the-diagnostics-bar-including-the-download-button-progress-text-and-the-deployment-instructions-that-reference-downloading-extracting-a-zip",
+      "title": "Remove the ZIP build export feature from the UI by deleting the \"Build Export\" section in the Diagnostics bar, including the download button, progress text, and the deployment instructions that reference downloading/extracting a ZIP.",
       "reqIds": [
         "REQ-1"
       ],
       "version": 1
     },
     {
-      "id": "feature-move-the-wallet-connect-entry-point-to-the-top-of-the-screen-so-users-can-always-see-a-wallet-connect-button-in-the-top-area-above-the-hero-content-regardless-of-balance-refresh-behavior",
-      "title": "Move the Wallet Connect entry point to the top of the screen so users can always see a Wallet Connect button in the top area (above the hero/content), regardless of balance refresh behavior.",
+      "id": "feature-remove-the-underlying-zip-export-implementation-so-the-frontend-no-longer-generates-or-downloads-zip-files-including-removing-the-usage-of-exportfrontendbuild-downloadblob-and-any-zip-writer-logic-that-is-only-used-for-this-export",
+      "title": "Remove the underlying ZIP export implementation so the frontend no longer generates or downloads ZIP files, including removing the usage of exportFrontendBuild/downloadBlob and any ZIP writer logic that is only used for this export.",
       "reqIds": [
         "REQ-2"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-update-the-vault-balances-display-to-be-explicitly-token-wise-show-a-clear-list-table-where-each-row-is-a-token-label-bnb-plus-other-tokens-with-its-balance",
-      "title": "Update the vault balances display to be explicitly token-wise: show a clear list/table where each row is a token label (BNB plus other tokens) with its balance.",
-      "reqIds": [
-        "REQ-3"
       ],
       "version": 1
     }
@@ -36,18 +26,12 @@
   "new_feature_requests": [
     {
       "id": "AR-1",
-      "summary": "Move Wallet Connect button to the top of the screen.",
-      "reqIds": [],
-      "status": "pending"
-    },
-    {
-      "id": "AR-2",
-      "summary": "Show vault balance token-wise (e.g., BNB and other tokens labeled).",
+      "summary": "Remove the zip file from the build/deployment output",
       "reqIds": [],
       "status": "pending"
     }
   ],
-  "projectName": "Stabilize live balance fetching, move Wallet Connect to top, and show token-wise vault balances",
+  "projectName": "Remove ZIP build export from the app",
   "clarification_mode": "instant",
   "clarification_rounds": 0
 }

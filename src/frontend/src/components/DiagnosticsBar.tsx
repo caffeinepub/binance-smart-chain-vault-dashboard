@@ -18,6 +18,7 @@ interface DiagnosticsBarProps {
 export function DiagnosticsBar({ chainId, isMobile, hasMetaMask }: DiagnosticsBarProps) {
   const [copied, setCopied] = useState(false);
   const [perfCopied, setPerfCopied] = useState(false);
+  
   const buildVersion = getBuildVersion();
   const buildId = getDeployedBuildId();
   const perfData = getPerformanceCheckData();
@@ -115,7 +116,7 @@ Timestamp: ${diagnostics.timestamp}`;
 
       <Separator />
 
-      <div className="px-4 py-3">
+      <div className="px-4 py-3 space-y-3">
         <Card className="bg-background/50">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">

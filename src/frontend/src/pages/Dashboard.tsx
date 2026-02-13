@@ -4,35 +4,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import WalletConnect from '@/components/WalletConnect';
-import { BalanceView } from '@/components/BalanceView';
 import { DepositForm } from '@/components/DepositForm';
 import { WithdrawForm } from '@/components/WithdrawForm';
 import ContractInfo from '@/components/ContractInfo';
+import { BalanceView } from '@/components/BalanceView';
+import { WalletBalancesView } from '@/components/WalletBalancesView';
 import { DiagnosticsBar } from '@/components/DiagnosticsBar';
 import { useWeb3 } from '@/hooks/useWeb3';
-import { useVaultBalances } from '@/hooks/useVaultBalances';
 import { APP_BRANDING } from '@/lib/appBranding';
 
 const BSC_CHAIN_ID = 56;
 
 export function Dashboard() {
   const { isConnected, account, chainId, hasMetaMask, isMobile, isInitializing } = useWeb3();
-  const {
-    bnbBalance,
-    bnbBalanceRaw,
-    bnbError,
-    bnbFallbackUsed,
-    tokenBalances,
-    isLoading,
-    isRefreshing,
-    error,
-    refetch,
-    lastUpdated,
-    liveUpdatesEnabled,
-    setLiveUpdatesEnabled,
-    clearMetadataCache,
-    metadataCacheSize,
-  } = useVaultBalances();
 
   const [activeTab, setActiveTab] = useState<string>('deposit');
 
@@ -70,7 +54,7 @@ export function Dashboard() {
             {isConnected && chainId !== null && !isOnBSC && (
               <Alert className="mt-4">
                 <AlertDescription>
-                  Please switch to Binance Smart Chain (BSC) network to view your vault balances and perform operations.
+                  Please switch to Binance Smart Chain (BSC) network to perform vault operations.
                 </AlertDescription>
               </Alert>
             )}
@@ -79,63 +63,47 @@ export function Dashboard() {
 
         {/* Main Content - Show when connected AND on BSC (or detecting network) */}
         {!isInitializing && isConnected && (isOnBSC || chainId === null) && (
-          <div className="grid gap-6 lg:grid-cols-2">
-            {/* Left Column: Balances */}
-            <div className="space-y-6">
-              <BalanceView
-                bnbBalance={bnbBalance}
-                bnbBalanceRaw={bnbBalanceRaw}
-                bnbError={bnbError}
-                bnbFallbackUsed={bnbFallbackUsed}
-                tokenBalances={tokenBalances}
-                isLoading={isLoading}
-                isRefreshing={isRefreshing}
-                error={error}
-                onRefresh={refetch}
-                lastUpdated={lastUpdated}
-                liveUpdatesEnabled={liveUpdatesEnabled}
-                onToggleLiveUpdates={setLiveUpdatesEnabled}
-                onClearMetadataCache={clearMetadataCache}
-                metadataCacheSize={metadataCacheSize}
-              />
-            </div>
+          <div className="max-w-2xl mx-auto space-y-6">
+            {/* Wallet Balances */}
+            <WalletBalancesView />
 
-            {/* Right Column: Operations */}
-            <div className="space-y-6">
-              <Card className="border-primary/20">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Wallet className="h-5 w-5 text-primary" />
-                    Vault Operations
-                  </CardTitle>
-                  <CardDescription>
-                    Deposit or withdraw assets from your vault
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Tabs value={activeTab} onValueChange={setActiveTab}>
-                    <TabsList className="grid w-full grid-cols-2">
-                      <TabsTrigger value="deposit" className="gap-2">
-                        <ArrowDownToLine className="h-4 w-4" />
-                        Deposit
-                      </TabsTrigger>
-                      <TabsTrigger value="withdraw" className="gap-2">
-                        <ArrowUpFromLine className="h-4 w-4" />
-                        Withdraw
-                      </TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="deposit" className="mt-4">
-                      <DepositForm onSuccess={refetch} />
-                    </TabsContent>
-                    <TabsContent value="withdraw" className="mt-4">
-                      <WithdrawForm onSuccess={refetch} />
-                    </TabsContent>
-                  </Tabs>
-                </CardContent>
-              </Card>
+            {/* Vault Balances */}
+            <BalanceView />
 
-              <ContractInfo />
-            </div>
+            {/* Vault Operations */}
+            <Card className="border-primary/20">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Wallet className="h-5 w-5 text-primary" />
+                  Vault Operations
+                </CardTitle>
+                <CardDescription>
+                  Deposit or withdraw assets from your vault
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Tabs value={activeTab} onValueChange={setActiveTab}>
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="deposit" className="gap-2">
+                      <ArrowDownToLine className="h-4 w-4" />
+                      Deposit
+                    </TabsTrigger>
+                    <TabsTrigger value="withdraw" className="gap-2">
+                      <ArrowUpFromLine className="h-4 w-4" />
+                      Withdraw
+                    </TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="deposit" className="mt-4">
+                    <DepositForm />
+                  </TabsContent>
+                  <TabsContent value="withdraw" className="mt-4">
+                    <WithdrawForm />
+                  </TabsContent>
+                </Tabs>
+              </CardContent>
+            </Card>
+
+            <ContractInfo />
           </div>
         )}
 

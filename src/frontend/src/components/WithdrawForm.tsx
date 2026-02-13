@@ -7,7 +7,6 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { useVaultOperations } from '@/hooks/useVaultOperations';
-import { useVaultBalances } from '@/hooks/useVaultBalances';
 import { TokenSelectorInput } from '@/components/TokenSelectorInput';
 import TransactionHistory from '@/components/TransactionHistory';
 import { useTxHistory } from '@/hooks/useTxHistory';
@@ -26,7 +25,6 @@ export function WithdrawForm({ onSuccess }: WithdrawFormProps) {
   const [showHistory, setShowHistory] = useState(false);
 
   const { withdrawBNB, withdrawToken } = useVaultOperations();
-  const { bnbBalance, tokenBalances } = useVaultBalances(false);
   const { addEntry } = useTxHistory();
   const { account } = useWeb3();
 
@@ -85,11 +83,8 @@ export function WithdrawForm({ onSuccess }: WithdrawFormProps) {
       const txHash = await withdrawToken(tokenAddress, account, amount);
       toast.success('Token withdrawal initiated');
 
-      // Find token symbol for history
-      const token = tokenBalances.find(
-        (t) => t.address.toLowerCase() === tokenAddress.toLowerCase()
-      );
-      const symbol = token?.symbol || tokenAddress.slice(0, 8);
+      // Use shortened address as fallback label for history
+      const symbol = tokenAddress.slice(0, 10) + '...';
 
       // Add to history
       addEntry('Withdraw Token', symbol, amount, txHash);
@@ -108,14 +103,6 @@ export function WithdrawForm({ onSuccess }: WithdrawFormProps) {
 
   return (
     <div className="space-y-6">
-      {/* Vault Balance Display */}
-      <div className="p-4 rounded-lg bg-gradient-to-br from-primary/10 to-accent/10 border border-primary/20">
-        <div className="text-sm text-muted-foreground mb-1">Current Vault Balance</div>
-        <div className="text-2xl font-bold font-mono text-primary">
-          {parseFloat(bnbBalance).toFixed(6)} BNB
-        </div>
-      </div>
-
       {error && (
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>

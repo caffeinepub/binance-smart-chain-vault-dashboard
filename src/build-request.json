@@ -1,72 +1,53 @@
 {
   "kind": "build_request",
-  "title": "Stabilize live balance fetching, move Wallet Connect to top, and show token-wise vault balances",
+  "title": "Remove ZIP build export from the app",
   "priority": "normal",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "Fix the live vault balance data-fetch/polling so it does not trigger repeated refresh loops and does not prevent the Wallet Connect UI from being shown when needed.",
+      "text": "Remove the ZIP build export feature from the UI by deleting the \"Build Export\" section in the Diagnostics bar, including the download button, progress text, and the deployment instructions that reference downloading/extracting a ZIP.",
       "target": "frontend",
       "source": {
         "messageIds": [
           "recent-messages"
         ],
         "quotes": [
-          "I think you have added live data fatch from bsc scan vo theek se kaam nahi kar rha hia isliye baar baar refresh ho rha isi liye wallet connect bhi show nahi ho rhai"
+          "pls remove zip file from it"
         ]
       },
       "acceptanceCriteria": [
-        "With live updates enabled, the UI does not continually re-render/refresh the page in a loop.",
-        "Polling/refreshing balances does not cause the Wallet Connect UI to disappear when the user is not connected or is on the wrong network.",
-        "If balance fetch fails (timeouts/RPC errors), the app shows an error state but remains usable (no refresh loop), and the user can manually retry refresh.",
-        "Manual refresh and polling are coalesced so multiple overlapping fetches do not cascade into repeated state resets."
+        "In the Diagnostics bar, there is no \"Build Export\" card/section visible.",
+        "No user-facing text anywhere in the app mentions downloading a ZIP, extracting a ZIP, or \"Download Frontend Build (ZIP)\".",
+        "The rest of the Diagnostics bar (build info, copy diagnostics, performance check) still renders and functions as before."
       ]
     },
     {
       "id": "REQ-2",
-      "text": "Move the Wallet Connect entry point to the top of the screen so users can always see a Wallet Connect button in the top area (above the hero/content), regardless of balance refresh behavior.",
+      "text": "Remove the underlying ZIP export implementation so the frontend no longer generates or downloads ZIP files, including removing the usage of exportFrontendBuild/downloadBlob and any ZIP writer logic that is only used for this export.",
       "target": "frontend",
       "source": {
         "messageIds": [
           "recent-messages"
         ],
         "quotes": [
-          "aisa karo wallet connect button top per rakho"
+          "pls remove zip file from it"
         ]
       },
       "acceptanceCriteria": [
-        "A Wallet Connect button is visible at the top of the Dashboard layout when the user is not connected (and/or is initializing / wrong network).",
-        "The Wallet Connect UI remains accessible without requiring the user to scroll.",
-        "When connected, the top area no longer shows a primary “Connect Wallet” call-to-action (it may show connection status instead)."
-      ]
-    },
-    {
-      "id": "REQ-3",
-      "text": "Update the vault balances display to be explicitly token-wise: show a clear list/table where each row is a token label (BNB plus other tokens) with its balance.",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "recent-messages"
-        ],
-        "quotes": [
-          "uske baad vault balance token wise jisme bnb, and other token likha ho"
-        ]
-      },
-      "acceptanceCriteria": [
-        "The balances UI clearly presents BNB as a token row and displays other tokens as separate rows with their token labels (symbol) and balances.",
-        "If there are no tokens to display beyond BNB, the UI communicates that clearly (without hiding the token-wise structure).",
-        "Token rows remain readable during refresh (no flicker that looks like page refresh)."
+        "The frontend codebase has no runtime path that generates a .zip Blob for build export.",
+        "DiagnosticsBar no longer imports or references ZIP-export-related functions/modules (e.g., '@/lib/buildExport').",
+        "The application builds successfully with no unused/invalid imports after removing ZIP export code paths."
       ]
     }
   ],
   "constraints": [
-    "Do not edit files under frontend/src/components/ui (read-only UI components); compose them instead.",
-    "Do not modify any files listed as immutable in SYSTEM_CONTEXT."
+    "Do not modify files under frontend/src/components/ui (read-only components must be composed, not edited).",
+    "Do not modify frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useInternetIdentity.tsx, frontend/src/hooks/useActor.ts, or frontend/src/main.tsx (immutable paths).",
+    "Backend must remain single-actor; do not add additional backend services."
   ],
   "nonGoals": [
-    "Implementing third-party authentication or non-Internet-Identity auth.",
-    "Adding a new backend database or external database integration.",
-    "Adding real-time WebSocket-based updates."
+    "Do not add an alternative build/export mechanism (e.g., TAR, direct file listing, external hosting integrations) unless explicitly requested.",
+    "Do not change wallet connection, balance fetching, vault operations, or other dashboard features beyond removing ZIP export references."
   ],
   "imageRequirements": {
     "required": [],

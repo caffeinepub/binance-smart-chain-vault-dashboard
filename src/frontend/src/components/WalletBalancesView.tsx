@@ -1,24 +1,20 @@
-import { RefreshCw, Pause, Play, Trash2, Info } from 'lucide-react';
+import { RefreshCw, Pause, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { useVaultBalances } from '@/hooks/useVaultBalances';
+import { useWalletBalances } from '@/hooks/useWalletBalances';
 import { useBalanceValuations } from '@/hooks/useBalanceValuations';
-import { VaultBalancesTable } from './VaultBalancesTable';
+import { WalletBalancesTable } from './WalletBalancesTable';
 
-interface BalanceViewProps {
+interface WalletBalancesViewProps {
   onRefresh?: () => void;
   onToggleLiveUpdates?: (enabled: boolean) => void;
 }
 
-export function BalanceView({ onRefresh, onToggleLiveUpdates }: BalanceViewProps) {
+export function WalletBalancesView({ onRefresh, onToggleLiveUpdates }: WalletBalancesViewProps) {
   const {
     bnbBalance,
     bnbBalanceRaw,
-    bnbError,
-    bnbFallbackUsed,
     tokenBalances,
     isLoading,
     isRefreshing,
@@ -27,9 +23,7 @@ export function BalanceView({ onRefresh, onToggleLiveUpdates }: BalanceViewProps
     lastUpdated,
     liveUpdatesEnabled,
     setLiveUpdatesEnabled,
-    clearMetadataCache,
-    metadataCacheSize,
-  } = useVaultBalances();
+  } = useWalletBalances();
 
   const { bnbValuation, tokenValuations, isLoading: isLoadingPrices } = useBalanceValuations(
     bnbBalanceRaw,
@@ -51,8 +45,8 @@ export function BalanceView({ onRefresh, onToggleLiveUpdates }: BalanceViewProps
     return (
       <Card className="border-primary/20">
         <CardHeader>
-          <CardTitle>Loading Balances...</CardTitle>
-          <CardDescription>Fetching vault data from BSC network</CardDescription>
+          <CardTitle>Loading Wallet Balances...</CardTitle>
+          <CardDescription>Fetching your wallet data from BSC network</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center py-8">
@@ -69,7 +63,7 @@ export function BalanceView({ onRefresh, onToggleLiveUpdates }: BalanceViewProps
       <Card className="border-primary/20">
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
-            <span>Balance Controls</span>
+            <span>Wallet Balance Controls</span>
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
@@ -101,46 +95,23 @@ export function BalanceView({ onRefresh, onToggleLiveUpdates }: BalanceViewProps
               </Button>
             </div>
           </CardTitle>
-          <CardDescription className="flex items-center justify-between">
-            <span>
-              {lastUpdated
-                ? `Last updated: ${lastUpdated.toLocaleTimeString()}`
-                : 'Not yet updated'}
-            </span>
-            {metadataCacheSize > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={clearMetadataCache}
-                className="gap-2 text-xs h-7"
-              >
-                <Trash2 className="h-3 w-3" />
-                Clear Cache ({metadataCacheSize})
-              </Button>
-            )}
+          <CardDescription>
+            {lastUpdated
+              ? `Last updated: ${lastUpdated.toLocaleTimeString()}`
+              : 'Not yet updated'}
           </CardDescription>
         </CardHeader>
-        {(error || bnbFallbackUsed) && (
+        {error && (
           <CardContent className="pt-0">
-            {error && (
-              <Alert variant="destructive" className="mb-2">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-            {bnbFallbackUsed && !error && (
-              <Alert className="border-primary/30 bg-primary/5">
-                <Info className="h-4 w-4 text-primary" />
-                <AlertDescription className="text-sm">
-                  BNB balance fetched using native balance fallback (contract method unavailable)
-                </AlertDescription>
-              </Alert>
-            )}
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
           </CardContent>
         )}
       </Card>
 
       {/* Balances Table */}
-      <VaultBalancesTable
+      <WalletBalancesTable
         bnbBalance={bnbBalance}
         bnbValuation={bnbValuation}
         tokenBalances={tokenBalances}

@@ -1,89 +1,47 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Stabilize vault balance polling, keep Wallet Connect always visible, and present token-wise balances",
+  "title": "Remove ZIP build export from the app",
   "requirements": [
     {
       "id": "REQ-1",
-      "summary": "Stabilize vault balance polling/refetch to avoid refresh loops, preserve Wallet Connect visibility, and coalesce overlapping fetches with usable error+retry states.",
+      "summary": "Remove the Diagnostics bar \"Build Export\" UI card/section and all ZIP-related user-facing copy while keeping other diagnostics features unchanged.",
       "acceptanceCriteria": [
-        "With live updates enabled, the UI does not continually re-render/refresh the page in a loop.",
-        "Polling/refreshing balances does not cause the Wallet Connect UI to disappear when the user is not connected or is on the wrong network.",
-        "If balance fetch fails (timeouts/RPC errors), the app shows an error state but remains usable (no refresh loop), and the user can manually retry refresh.",
-        "Manual refresh and polling are coalesced so multiple overlapping fetches do not cascade into repeated state resets."
+        "In the Diagnostics bar, there is no \"Build Export\" card/section visible.",
+        "No user-facing text anywhere in the app mentions downloading a ZIP, extracting a ZIP, or \"Download Frontend Build (ZIP)\".",
+        "The rest of the Diagnostics bar (build info, copy diagnostics, performance check) still renders and functions as before."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/hooks/useVaultBalances.ts",
+          "path": "frontend/src/components/DiagnosticsBar.tsx",
           "operation": "modify",
-          "description": "Harden the balance fetch/polling logic to prevent cascaded state resets: keep last-known balances on fetch errors (do not reset to 0 on failures), treat chainId=null as an 'unknown/detecting network' state (avoid wrong-network error churn), and adjust coalescing so polling and manual refresh share a single in-flight promise (manual refresh should reuse in-flight work rather than always triggering an additional fetch)."
-        },
-        {
-          "path": "frontend/src/components/BalanceView.tsx",
-          "operation": "modify",
-          "description": "Ensure the balances UI remains stable during refresh and error conditions: keep rendering the token-wise structure while showing a non-blocking error state, ensure the existing Refresh button acts as a manual retry, and avoid any UI behavior that looks like a full-page refresh/flicker. Use existing shadcn-ui primitives (Button/Card/Alert/Badge/Separator) for consistent states; verify the component's usage instructions before implementing."
-        },
-        {
-          "path": "frontend/src/pages/Dashboard.tsx",
-          "operation": "modify",
-          "description": "Decouple Wallet Connect visibility from balance fetching by ensuring the page does not conditionally depend on vault balance hook transient states for showing Wallet Connect. Keep the 'connected & on BSC' gate for main content, but avoid any conditional rendering patterns that cause connect UI to blink/disappear during balance refresh."
+          "description": "Delete the entire \"Build Export\" Card section (download button, progress text, and deployment instructions) from the Diagnostics bar UI. Remove related React state, handlers, icons, and imports (including exportFrontendBuild/downloadBlob) so the remaining Diagnostics bar sections continue to render and function as before."
         }
       ]
     },
     {
       "id": "REQ-2",
-      "summary": "Move Wallet Connect entry point into a sticky top area so users always have a visible connect control above the dashboard content.",
+      "summary": "Remove the ZIP export implementation and any ZIP-only logic so the frontend can no longer generate or download ZIP files.",
       "acceptanceCriteria": [
-        "A Wallet Connect button is visible at the top of the Dashboard layout when the user is not connected (and/or is initializing / wrong network).",
-        "The Wallet Connect UI remains accessible without requiring the user to scroll.",
-        "When connected, the top area no longer shows a primary “Connect Wallet” call-to-action (it may show connection status instead)."
+        "The frontend codebase has no runtime path that generates a .zip Blob for build export.",
+        "DiagnosticsBar no longer imports or references ZIP-export-related functions/modules (e.g., '@/lib/buildExport').",
+        "The application builds successfully with no unused/invalid imports after removing ZIP export code paths."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/components/WalletConnectTopBar.tsx",
-          "operation": "create",
-          "description": "Create a compact, always-visible top-bar wallet control that uses the existing useWeb3 context to show: Connect (not connected), Switching CTA (wrong network), and a connected status view (connected). Compose with shadcn-ui Button and Alert styles where needed; verify the component's usage instructions before implementing."
+          "path": "frontend/src/lib/buildExport.ts",
+          "operation": "delete",
+          "description": "Remove the build export module that fetches app assets and assembles a ZIP Blob for download (including the download helper), since it is only used for ZIP export."
         },
         {
-          "path": "frontend/src/components/Header.tsx",
-          "operation": "modify",
-          "description": "Extend the sticky Header to include the new WalletConnectTopBar control in the top-right area while preserving branding and theme toggle. Compose shadcn-ui Button(s) already used in Header; verify the component's usage instructions before implementing."
+          "path": "frontend/src/lib/zipWriter.ts",
+          "operation": "delete",
+          "description": "Remove the in-browser ZIP writer implementation that exists solely to support the build export ZIP creation path."
         },
         {
-          "path": "frontend/src/App.tsx",
+          "path": "frontend/src/components/DiagnosticsBar.tsx",
           "operation": "modify",
-          "description": "Wire the Header into the app shell so the sticky top area is always rendered above the Dashboard, ensuring the Wallet Connect entry point remains visible regardless of dashboard/polling behavior."
-        },
-        {
-          "path": "frontend/src/pages/Dashboard.tsx",
-          "operation": "modify",
-          "description": "Adjust the existing in-page WalletConnect rendering to avoid duplicating the primary connect CTA once the top entry point exists (e.g., keep the full instructional panel for not-connected/wrong-network if desired, but ensure the top button is the always-visible entry point). Use existing shadcn-ui layout components (Card/Alert/Tabs) without editing ui components; verify the component's usage instructions before implementing."
-        }
-      ]
-    },
-    {
-      "id": "REQ-3",
-      "summary": "Present vault balances in an explicit token-wise list/table including a BNB row and one row per token with symbol and balance.",
-      "acceptanceCriteria": [
-        "The balances UI clearly presents BNB as a token row and displays other tokens as separate rows with their token labels (symbol) and balances.",
-        "If there are no tokens to display beyond BNB, the UI communicates that clearly (without hiding the token-wise structure).",
-        "Token rows remain readable during refresh (no flicker that looks like page refresh)."
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/components/VaultBalancesTable.tsx",
-          "operation": "create",
-          "description": "Create a dedicated token-wise balances table/list component that renders a unified set of rows: one for BNB and one per token (symbol + balance), with a clear 'no additional tokens' message while keeping the table structure visible. Compose with existing shadcn-ui Card/Separator/Badge/Alert primitives as needed; verify the component's usage instructions before implementing."
-        },
-        {
-          "path": "frontend/src/components/BalanceView.tsx",
-          "operation": "modify",
-          "description": "Refactor BalanceView to delegate token-wise rendering to VaultBalancesTable so the UI is explicitly row-based for BNB and other tokens, and remains stable during background refresh (keep values visible; show a subtle 'refreshing' indicator rather than clearing rows). Compose (do not edit) shadcn-ui components used by BalanceView; verify the component's usage instructions before implementing."
-        },
-        {
-          "path": "frontend/src/pages/Dashboard.tsx",
-          "operation": "modify",
-          "description": "Ensure the Dashboard continues to pass BNB and token balance data into the updated BalanceView/token-wise table display, and that the layout remains readable during refresh without appearing to 'page refresh'."
+          "description": "After removing the ZIP-export UI, ensure all ZIP-export-related imports/references are removed (e.g., '@/lib/buildExport') so there is no remaining runtime path that can generate or download ZIP files, and the app compiles cleanly without unused imports."
         }
       ]
     }

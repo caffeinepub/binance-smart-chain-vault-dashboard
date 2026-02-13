@@ -1,10 +1,11 @@
 import { Heart } from 'lucide-react';
 import { getBuildVersion, getDeployedBuildId } from '@/lib/buildInfo';
+import { APP_BRANDING } from '@/lib/appBranding';
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
   const appIdentifier = encodeURIComponent(
-    typeof window !== 'undefined' ? window.location.hostname : 'unknown-app'
+    typeof window !== 'undefined' ? window.location.hostname : APP_BRANDING.identifier
   );
   const caffeineUrl = `https://caffeine.ai/?utm_source=Caffeine-footer&utm_medium=referral&utm_content=${appIdentifier}`;
   const buildVersion = getBuildVersion();
@@ -15,7 +16,7 @@ export default function Footer() {
       <div className="container mx-auto px-4 py-6">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-start">
-            <span>© {currentYear} Digital Asset Vault</span>
+            <span>© {currentYear} {APP_BRANDING.fullName}</span>
             <span className="hidden sm:inline">•</span>
             <span className="text-xs opacity-70">
               {buildVersion} ({buildId})

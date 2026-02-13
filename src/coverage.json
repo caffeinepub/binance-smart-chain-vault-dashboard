@@ -1,50 +1,51 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-13T20:37:33.663Z",
+  "generatedAt": "2026-02-13T20:49:39.947Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
   },
   "requirements": {
-    "total": 3,
-    "implemented": 3,
+    "total": 2,
+    "implemented": 2,
     "items": [
       {
         "id": "REQ-1",
-        "summary": "Add a static, no-JavaScript reachability check page that can be loaded directly (e.g., `/health.html`) and displays the current build identifier (from the existing build ID metadata) so the user can distinguish DNS/hosting failures from in-app runtime failures.",
+        "summary": "Restore the app’s visible name/branding everywhere it appears so it matches the naming used in Version 14 (or lower), and ensure the name is consistent across the app shell and UI. This includes at minimum the HTML document title and metadata, the boot fallback screen title text, and the in-app header/footer branding.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/public/health.html"
+          "frontend/src/lib/appBranding.ts",
+          "frontend/index.html",
+          "frontend/src/components/Header.tsx",
+          "frontend/src/components/Footer.tsx",
+          "frontend/src/pages/Dashboard.tsx",
+          "frontend/public/health.html",
+          "frontend/src/components/DiagnosticsBar.tsx"
         ],
         "matchedFiles": [
-          "frontend/public/health.html"
+          "frontend/src/lib/appBranding.ts",
+          "frontend/src/components/Header.tsx",
+          "frontend/src/components/Footer.tsx",
+          "frontend/src/pages/Dashboard.tsx",
+          "frontend/src/components/DiagnosticsBar.tsx"
         ]
       },
       {
         "id": "REQ-2",
-        "summary": "Add a user-accessible “Performance check” section to the existing in-app diagnostics UI that reports basic page-load timing (e.g., time-to-app-mounted using the existing `app-mounted` signal, plus browser navigation timing when available) and includes a one-click copy-to-clipboard output for support/debugging.",
+        "summary": "Audit and revert any name-derived identifiers that can break loading when renamed (e.g., build identifier strings, hostname/app identifier derivations used in links, or other name-coupled values referenced at startup), restoring them to the Version 14 (or lower) values so the deployed app loads successfully.",
         "status": "implemented",
         "plannedFiles": [
+          "frontend/src/lib/appBranding.ts",
+          "frontend/src/lib/buildInfo.ts",
           "frontend/index.html",
-          "frontend/src/lib/performanceCheck.ts",
+          "frontend/src/components/Footer.tsx",
           "frontend/src/components/DiagnosticsBar.tsx"
         ],
         "matchedFiles": [
-          "frontend/index.html",
-          "frontend/src/lib/performanceCheck.ts",
+          "frontend/src/lib/appBranding.ts",
+          "frontend/src/components/Footer.tsx",
           "frontend/src/components/DiagnosticsBar.tsx"
-        ]
-      },
-      {
-        "id": "REQ-3",
-        "summary": "Ensure the boot fallback screen user-facing text remains clear and consistent for the three failure modes it already detects (resource/script load failure, network/connection issue, runtime error), and includes the build identifier in all non-success states so the user can report exactly what they saw.",
-        "status": "implemented",
-        "plannedFiles": [
-          "frontend/index.html"
-        ],
-        "matchedFiles": [
-          "frontend/index.html"
         ]
       }
     ]
@@ -54,10 +55,11 @@
     "feature_evidence.json",
     "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
-    "frontend/index.html",
-    "frontend/public/health.html",
     "frontend/src/components/DiagnosticsBar.tsx",
-    "frontend/src/lib/performanceCheck.ts",
+    "frontend/src/components/Footer.tsx",
+    "frontend/src/components/Header.tsx",
+    "frontend/src/lib/appBranding.ts",
+    "frontend/src/pages/Dashboard.tsx",
     "project_state.json",
     "scratch/component-selection.json",
     "spec.md",

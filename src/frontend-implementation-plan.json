@@ -1,63 +1,89 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Reachability health page + in-app performance check + clearer boot fallback (rollback v14)",
+  "title": "Restore Version 14 (or lower) app naming and stabilize name-derived identifiers",
   "requirements": [
     {
       "id": "REQ-1",
-      "summary": "Add a static no-JavaScript reachability page at a stable path that displays the current build identifier.",
+      "summary": "Restore the visible app name/branding across the HTML shell, boot fallback UI, and in-app header/footer to match Version 14 (or lower) naming consistently in English.",
       "acceptanceCriteria": [
-        "A new static asset is available at a stable path (e.g., `/health.html`) and loads without requiring the React app to boot.",
-        "The health page includes plain English text and shows the current build identifier (e.g., `rollback-v14-2026-02-13`).",
-        "If the main app URL fails to load but `/health.html` loads, the user can clearly tell it is an app boot issue rather than DNS/host resolution."
+        "Browser tab title matches the Version 14 (or lower) app name.",
+        "Boot fallback screen title text uses the Version 14 (or lower) app name consistently.",
+        "In-app header branding text uses the Version 14 (or lower) app name consistently (including responsive variants like short names).",
+        "In-app footer branding text uses the Version 14 (or lower) app name consistently.",
+        "All user-facing naming text is in English."
       ],
       "file_operations": [
         {
-          "path": "frontend/public/health.html",
+          "path": "frontend/src/lib/appBranding.ts",
           "operation": "create",
-          "description": "Create a fully static HTML page (no JavaScript required) at /health.html that includes plain-English reachability guidance and renders the current build identifier consistent with frontend/index.html meta build-id (e.g., rollback-v14-2026-02-13)."
+          "description": "Create a single source of truth for Version 14 (or lower) branding strings (e.g., full app name and responsive short name) to ensure consistent usage across UI surfaces."
+        },
+        {
+          "path": "frontend/index.html",
+          "operation": "modify",
+          "description": "Update the HTML document title and any relevant metadata/boot fallback title text to match the Version 14 (or lower) app name consistently, in English."
+        },
+        {
+          "path": "frontend/src/components/Header.tsx",
+          "operation": "modify",
+          "description": "Replace hardcoded header branding strings with values sourced from frontend/src/lib/appBranding.ts to ensure consistent full/short responsive naming."
+        },
+        {
+          "path": "frontend/src/components/Footer.tsx",
+          "operation": "modify",
+          "description": "Replace hardcoded footer branding strings with values sourced from frontend/src/lib/appBranding.ts so the footer displays the Version 14 (or lower) app name consistently."
+        },
+        {
+          "path": "frontend/src/pages/Dashboard.tsx",
+          "operation": "modify",
+          "description": "Replace the hardcoded hero/title branding text with values sourced from frontend/src/lib/appBranding.ts to keep in-app visible naming consistent."
+        },
+        {
+          "path": "frontend/public/health.html",
+          "operation": "modify",
+          "description": "Update the static health page title and visible heading/copy that references the app name to match the Version 14 (or lower) naming consistently in English."
+        },
+        {
+          "path": "frontend/src/components/DiagnosticsBar.tsx",
+          "operation": "modify",
+          "description": "Update the user-facing diagnostics header text to use the Version 14 (or lower) app name via frontend/src/lib/appBranding.ts so diagnostics copy is consistent with the restored branding."
         }
       ]
     },
     {
       "id": "REQ-2",
-      "summary": "Add a user-accessible Performance check section in the in-app diagnostics UI with timing metrics and copy-to-clipboard support.",
+      "summary": "Audit and revert name-derived identifiers referenced at startup (build identifier strings and any hostname/app-identifier derivations used in links or diagnostics) to Version 14 (or lower) values to prevent load regressions.",
       "acceptanceCriteria": [
-        "After the app loads, the Diagnostics area shows a clearly labeled “Performance check” section in English.",
-        "The performance check displays at least: deployed build ID, timestamp, and a measured time from initial navigation to the `app-mounted` event (in ms or s).",
-        "There is a “Copy” action that copies the performance data to clipboard in a readable text block."
+        "No startup-time runtime errors are caused by missing/renamed name-derived identifiers.",
+        "The app successfully mounts (fires the existing `app-mounted` signal) and the boot fallback screen hides on a normal load.",
+        "Any build/version/identifier values shown in the UI remain present and do not prevent load when changed."
       ],
       "file_operations": [
         {
-          "path": "frontend/index.html",
+          "path": "frontend/src/lib/appBranding.ts",
           "operation": "modify",
-          "description": "Extend the existing boot script to record a durable performance measurement for time-to-app-mounted using the existing app-mounted signal (e.g., store a window-scoped value captured when the app-mounted event fires) so the React UI can display it later without races."
+          "description": "Add/confirm any non-UI name-derived constants needed to avoid ad-hoc string construction at startup (e.g., a stable, Version 14 (or lower) identifier-safe label for diagnostics/attribution text)."
         },
         {
-          "path": "frontend/src/lib/performanceCheck.ts",
-          "operation": "create",
-          "description": "Add a small helper to assemble performance-check data (build ID via existing buildInfo helpers, timestamp, time-to-app-mounted from the window-scoped value set in frontend/index.html, and browser navigation timing when available) into a readable text block for display/copy."
+          "path": "frontend/src/lib/buildInfo.ts",
+          "operation": "modify",
+          "description": "Audit build/version/identifier helpers to ensure they are resilient to missing/changed meta tags and do not throw at startup; keep build/version/identifier values present for UI display without affecting app mount."
+        },
+        {
+          "path": "frontend/index.html",
+          "operation": "modify",
+          "description": "Audit name-coupled startup references in the HTML shell (e.g., build-id meta usage and boot fallback script assumptions) and revert/align any identifier strings that must match Version 14 (or lower) values so the app mounts and the fallback hides on normal load."
+        },
+        {
+          "path": "frontend/src/components/Footer.tsx",
+          "operation": "modify",
+          "description": "Audit any hostname/app-identifier derivations used in outgoing links to ensure they are stable and not inadvertently coupled to the visible app name; keep attribution links functional after the naming rollback."
         },
         {
           "path": "frontend/src/components/DiagnosticsBar.tsx",
           "operation": "modify",
-          "description": "Update the existing diagnostics UI to include a clearly labeled “Performance check” section and a one-click copy-to-clipboard action for the performance output. Use existing shadcn-ui components (e.g., Button/Badge/Card/Alert as already available) to present the section consistently; verify the component's usage instructions before implementing."
-        }
-      ]
-    },
-    {
-      "id": "REQ-3",
-      "summary": "Keep boot fallback messaging clear/consistent across existing failure modes and include build identifier in all non-success states.",
-      "acceptanceCriteria": [
-        "When the app is still loading, times out, or fails due to a resource/network/runtime error, the boot fallback UI includes the build identifier visibly.",
-        "The fallback messages are in plain English and do not require the user to open developer tools to identify the error category and build ID.",
-        "On successful load, the boot fallback hides as it does now (triggered by `app-mounted` or root mutation)."
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/index.html",
-          "operation": "modify",
-          "description": "Adjust the boot fallback UI text so it remains plain-English and consistent for the three existing failure modes (resource/script load failure, network/connection issue, runtime error), and ensure the build identifier is visible in every non-success state including the initial loading state (not only after the still-loading threshold). Keep the existing success behavior where the fallback hides on app-mounted/root mutation."
+          "description": "Ensure diagnostics text composition remains robust (no assumptions about renamed identifiers) while preserving build/version/identifier visibility; align any name-derived labels with frontend/src/lib/appBranding.ts."
         }
       ]
     }

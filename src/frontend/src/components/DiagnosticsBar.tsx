@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Separator } from '@/components/ui/separator';
 import { getBuildVersion, getDeployedBuildId } from '@/lib/buildInfo';
 import { getPerformanceCheckData, formatPerformanceCheckText } from '@/lib/performanceCheck';
+import { APP_BRANDING } from '@/lib/appBranding';
 import { toast } from 'sonner';
 
 interface DiagnosticsBarProps {
@@ -24,6 +25,7 @@ export function DiagnosticsBar({ chainId, isMobile, hasMetaMask }: DiagnosticsBa
   const copyDiagnostics = async () => {
     try {
       const diagnostics = {
+        appName: APP_BRANDING.fullName,
         buildId,
         buildVersion,
         url: window.location.href,
@@ -35,7 +37,7 @@ export function DiagnosticsBar({ chainId, isMobile, hasMetaMask }: DiagnosticsBa
         timestamp: new Date().toISOString(),
       };
 
-      const text = `Digital Asset Vault Diagnostics
+      const text = `${APP_BRANDING.fullName} Diagnostics
 Build ID: ${diagnostics.buildId}
 Build Version: ${diagnostics.buildVersion}
 URL: ${diagnostics.url}

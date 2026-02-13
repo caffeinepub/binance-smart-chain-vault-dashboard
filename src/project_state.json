@@ -4,37 +4,29 @@
   "summary": "New project",
   "architectural_notes": [],
   "known_issues": [
-    "App not loading across multiple deployments; deployment may be in a bad/stuck state and needs revert to last known good version (user confirms prior version loaded)."
+    "Regression: latest deployed version not opening/working for user; suspected cause is app/project name/package identifier changed vs V14 or earlier."
   ],
   "isFixRequest": true,
   "existing_features": [
     {
-      "id": "feature-add-a-static-no-javascript-reachability-check-page-that-can-be-loaded-directly-e-g-health-html-and-displays-the-current-build-identifier-from-the-existing-build-id-metadata-so-the-user-can-distinguish-dns-hosting-failures-from-in-app-runtime-failures",
-      "title": "Add a static, no-JavaScript reachability check page that can be loaded directly (e.g., `/health.html`) and displays the current build identifier (from the existing build ID metadata) so the user can distinguish DNS/hosting failures from in-app runtime failures.",
+      "id": "feature-restore-the-app-s-visible-name-branding-everywhere-it-appears-so-it-matches-the-naming-used-in-version-14-or-lower-and-ensure-the-name-is-consistent-across-the-app-shell-and-ui-this-includes-at-minimum-the-html-document-title-and-metadata-the-boot-fallback-screen-title-text-and-the-in-app-header-footer-branding",
+      "title": "Restore the app’s visible name/branding everywhere it appears so it matches the naming used in Version 14 (or lower), and ensure the name is consistent across the app shell and UI. This includes at minimum the HTML document title and metadata, the boot fallback screen title text, and the in-app header/footer branding.",
       "reqIds": [
         "REQ-1"
       ],
       "version": 1
     },
     {
-      "id": "feature-add-a-user-accessible-performance-check-section-to-the-existing-in-app-diagnostics-ui-that-reports-basic-page-load-timing-e-g-time-to-app-mounted-using-the-existing-app-mounted-signal-plus-browser-navigation-timing-when-available-and-includes-a-one-click-copy-to-clipboard-output-for-support-debugging",
-      "title": "Add a user-accessible “Performance check” section to the existing in-app diagnostics UI that reports basic page-load timing (e.g., time-to-app-mounted using the existing `app-mounted` signal, plus browser navigation timing when available) and includes a one-click copy-to-clipboard output for support/debugging.",
+      "id": "feature-audit-and-revert-any-name-derived-identifiers-that-can-break-loading-when-renamed-e-g-build-identifier-strings-hostname-app-identifier-derivations-used-in-links-or-other-name-coupled-values-referenced-at-startup-restoring-them-to-the-version-14-or-lower-values-so-the-deployed-app-loads-successfully",
+      "title": "Audit and revert any name-derived identifiers that can break loading when renamed (e.g., build identifier strings, hostname/app identifier derivations used in links, or other name-coupled values referenced at startup), restoring them to the Version 14 (or lower) values so the deployed app loads successfully.",
       "reqIds": [
         "REQ-2"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-ensure-the-boot-fallback-screen-user-facing-text-remains-clear-and-consistent-for-the-three-failure-modes-it-already-detects-resource-script-load-failure-network-connection-issue-runtime-error-and-includes-the-build-identifier-in-all-non-success-states-so-the-user-can-report-exactly-what-they-saw",
-      "title": "Ensure the boot fallback screen user-facing text remains clear and consistent for the three failure modes it already detects (resource/script load failure, network/connection issue, runtime error), and includes the build identifier in all non-success states so the user can report exactly what they saw.",
-      "reqIds": [
-        "REQ-3"
       ],
       "version": 1
     }
   ],
   "new_feature_requests": [],
-  "projectName": "Stabilize deployment loading and add a simple reachability/performance self-check (rollback v14)",
+  "projectName": "Restore app name/identifier to match Version 14 (or lower) naming",
   "clarification_mode": "instant",
   "clarification_rounds": 0
 }

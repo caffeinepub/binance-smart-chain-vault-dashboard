@@ -1,76 +1,54 @@
 {
   "kind": "build_request",
-  "title": "Stabilize deployment loading and add a simple reachability/performance self-check (rollback v14)",
+  "title": "Restore app name/identifier to match Version 14 (or lower) naming",
   "priority": "high",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "Add a static, no-JavaScript reachability check page that can be loaded directly (e.g., `/health.html`) and displays the current build identifier (from the existing build ID metadata) so the user can distinguish DNS/hosting failures from in-app runtime failures.",
+      "text": "Restore the app’s visible name/branding everywhere it appears so it matches the naming used in Version 14 (or lower), and ensure the name is consistent across the app shell and UI. This includes at minimum the HTML document title and metadata, the boot fallback screen title text, and the in-app header/footer branding.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-5",
-          "msg-7"
+          "msg-1"
         ],
         "quotes": [
-          "Please check it properly its vaisting my time",
-          "yes"
+          "may be we have changed the name so please make it as used in v14 or lower"
         ]
       },
       "acceptanceCriteria": [
-        "A new static asset is available at a stable path (e.g., `/health.html`) and loads without requiring the React app to boot.",
-        "The health page includes plain English text and shows the current build identifier (e.g., `rollback-v14-2026-02-13`).",
-        "If the main app URL fails to load but `/health.html` loads, the user can clearly tell it is an app boot issue rather than DNS/host resolution."
+        "Browser tab title matches the Version 14 (or lower) app name.",
+        "Boot fallback screen title text uses the Version 14 (or lower) app name consistently.",
+        "In-app header branding text uses the Version 14 (or lower) app name consistently (including responsive variants like short names).",
+        "In-app footer branding text uses the Version 14 (or lower) app name consistently.",
+        "All user-facing naming text is in English."
       ]
     },
     {
       "id": "REQ-2",
-      "text": "Add a user-accessible “Performance check” section to the existing in-app diagnostics UI that reports basic page-load timing (e.g., time-to-app-mounted using the existing `app-mounted` signal, plus browser navigation timing when available) and includes a one-click copy-to-clipboard output for support/debugging.",
+      "text": "Audit and revert any name-derived identifiers that can break loading when renamed (e.g., build identifier strings, hostname/app identifier derivations used in links, or other name-coupled values referenced at startup), restoring them to the Version 14 (or lower) values so the deployed app loads successfully.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-5",
-          "msg-7"
+          "msg-1"
         ],
         "quotes": [
-          "Please check it properly its vaisting my time",
-          "yes"
+          "may be we have changed the name so please make it as used in v14 or lower"
         ]
       },
       "acceptanceCriteria": [
-        "After the app loads, the Diagnostics area shows a clearly labeled “Performance check” section in English.",
-        "The performance check displays at least: deployed build ID, timestamp, and a measured time from initial navigation to the `app-mounted` event (in ms or s).",
-        "There is a “Copy” action that copies the performance data to clipboard in a readable text block."
-      ]
-    },
-    {
-      "id": "REQ-3",
-      "text": "Ensure the boot fallback screen user-facing text remains clear and consistent for the three failure modes it already detects (resource/script load failure, network/connection issue, runtime error), and includes the build identifier in all non-success states so the user can report exactly what they saw.",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-5",
-          "msg-7"
-        ],
-        "quotes": [
-          "Please check it properly its vaisting my time",
-          "yes"
-        ]
-      },
-      "acceptanceCriteria": [
-        "When the app is still loading, times out, or fails due to a resource/network/runtime error, the boot fallback UI includes the build identifier visibly.",
-        "The fallback messages are in plain English and do not require the user to open developer tools to identify the error category and build ID.",
-        "On successful load, the boot fallback hides as it does now (triggered by `app-mounted` or root mutation)."
+        "No startup-time runtime errors are caused by missing/renamed name-derived identifiers.",
+        "The app successfully mounts (fires the existing `app-mounted` signal) and the boot fallback screen hides on a normal load.",
+        "Any build/version/identifier values shown in the UI remain present and do not prevent load when changed."
       ]
     }
   ],
   "constraints": [
-    "Frontend files under `frontend/src/hooks/useInternetIdentity.ts`, `frontend/src/hooks/useInternetIdentity.tsx`, `frontend/src/hooks/useActor.ts`, `frontend/src/main.tsx`, and `frontend/src/components/ui` are immutable and must not be modified.",
-    "Do not introduce additional backend services or external databases; keep changes within the existing single-frontend deployment model."
+    "Do not edit files under frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useInternetIdentity.tsx, frontend/src/hooks/useActor.ts, frontend/src/main.tsx, or anything under frontend/src/components/ui (compose existing UI components instead).",
+    "Keep backend as a single Motoko actor; only add backend changes if strictly necessary for the naming rollback."
   ],
   "nonGoals": [
-    "Do not add new vault features (deposit/withdraw logic, token watchlist behavior, pricing, etc.) beyond diagnostics/reachability checks.",
-    "Do not implement third-party monitoring, analytics, or external logging services."
+    "Adding new product features beyond restoring Version 14 (or lower) naming consistency.",
+    "Introducing third-party authentication providers or external databases/services."
   ],
   "imageRequirements": {
     "required": [],

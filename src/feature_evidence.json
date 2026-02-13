@@ -2,10 +2,14 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-add-a-static-no-javascript-reachability-check-page-that-can-be-loaded-directly-e-g-health-html-and-displays-the-current-build-identifier-from-the-existing-build-id-metadata-so-the-user-can-distinguish-dns-hosting-failures-from-in-app-runtime-failures",
-      "featureTitle": "Add a static, no-JavaScript reachability check page that can be loaded directly (e.g., `/health.html`) and displays the current build identifier (from the existing build ID metadata) so the user can distinguish DNS/hosting failures from in-app runtime failures.",
+      "featureId": "feature-restore-the-app-s-visible-name-branding-everywhere-it-appears-so-it-matches-the-naming-used-in-version-14-or-lower-and-ensure-the-name-is-consistent-across-the-app-shell-and-ui-this-includes-at-minimum-the-html-document-title-and-metadata-the-boot-fallback-screen-title-text-and-the-in-app-header-footer-branding",
+      "featureTitle": "Restore the app’s visible name/branding everywhere it appears so it matches the naming used in Version 14 (or lower), and ensure the name is consistent across the app shell and UI. This includes at minimum the HTML document title and metadata, the boot fallback screen title text, and the in-app header/footer branding.",
       "files": [
-        "frontend/public/health.html"
+        "frontend/src/components/DiagnosticsBar.tsx",
+        "frontend/src/components/Footer.tsx",
+        "frontend/src/components/Header.tsx",
+        "frontend/src/lib/appBranding.ts",
+        "frontend/src/pages/Dashboard.tsx"
       ],
       "components": [
         "core-infrastructure@1.0.2",
@@ -20,12 +24,12 @@
       "confidence": "high"
     },
     {
-      "featureId": "feature-add-a-user-accessible-performance-check-section-to-the-existing-in-app-diagnostics-ui-that-reports-basic-page-load-timing-e-g-time-to-app-mounted-using-the-existing-app-mounted-signal-plus-browser-navigation-timing-when-available-and-includes-a-one-click-copy-to-clipboard-output-for-support-debugging",
-      "featureTitle": "Add a user-accessible “Performance check” section to the existing in-app diagnostics UI that reports basic page-load timing (e.g., time-to-app-mounted using the existing `app-mounted` signal, plus browser navigation timing when available) and includes a one-click copy-to-clipboard output for support/debugging.",
+      "featureId": "feature-audit-and-revert-any-name-derived-identifiers-that-can-break-loading-when-renamed-e-g-build-identifier-strings-hostname-app-identifier-derivations-used-in-links-or-other-name-coupled-values-referenced-at-startup-restoring-them-to-the-version-14-or-lower-values-so-the-deployed-app-loads-successfully",
+      "featureTitle": "Audit and revert any name-derived identifiers that can break loading when renamed (e.g., build identifier strings, hostname/app identifier derivations used in links, or other name-coupled values referenced at startup), restoring them to the Version 14 (or lower) values so the deployed app loads successfully.",
       "files": [
-        "frontend/index.html",
         "frontend/src/components/DiagnosticsBar.tsx",
-        "frontend/src/lib/performanceCheck.ts"
+        "frontend/src/components/Footer.tsx",
+        "frontend/src/lib/appBranding.ts"
       ],
       "components": [
         "core-infrastructure@1.0.2",
@@ -36,24 +40,6 @@
       ],
       "testIds": [
         "REQ-2"
-      ],
-      "confidence": "high"
-    },
-    {
-      "featureId": "feature-ensure-the-boot-fallback-screen-user-facing-text-remains-clear-and-consistent-for-the-three-failure-modes-it-already-detects-resource-script-load-failure-network-connection-issue-runtime-error-and-includes-the-build-identifier-in-all-non-success-states-so-the-user-can-report-exactly-what-they-saw",
-      "featureTitle": "Ensure the boot fallback screen user-facing text remains clear and consistent for the three failure modes it already detects (resource/script load failure, network/connection issue, runtime error), and includes the build identifier in all non-success states so the user can report exactly what they saw.",
-      "files": [
-        "frontend/index.html"
-      ],
-      "components": [
-        "core-infrastructure@1.0.2",
-        "shadcn-ui@1.0.0",
-        "build-template-react@1.0.0",
-        "initial-app@1.0.0",
-        "github-export-icp-cli@1.0.0"
-      ],
-      "testIds": [
-        "REQ-3"
       ],
       "confidence": "high"
     }

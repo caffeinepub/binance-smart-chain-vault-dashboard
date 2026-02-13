@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useWeb3 } from '@/hooks/useWeb3';
 import { useVaultBalances } from '@/hooks/useVaultBalances';
+import { APP_BRANDING } from '@/lib/appBranding';
 
 const BSC_CHAIN_ID = 56;
 
@@ -42,7 +43,7 @@ export function Dashboard() {
             <Shield className="h-8 w-8 text-primary-foreground" />
           </div>
           <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary via-primary to-accent bg-clip-text text-transparent">
-            Digital Asset Vault
+            {APP_BRANDING.fullName}
           </h1>
         </div>
 

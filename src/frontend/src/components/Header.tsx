@@ -1,6 +1,7 @@
 import { Moon, Sun, Shield } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
+import { APP_BRANDING } from '@/lib/appBranding';
 
 export default function Header() {
   const { theme, setTheme } = useTheme();
@@ -15,10 +16,10 @@ export default function Header() {
             </div>
             <div className="flex flex-col">
               <span className="font-bold text-base md:text-lg bg-gradient-to-r from-primary to-chart-1 bg-clip-text text-transparent">
-                <span className="hidden sm:inline">Digital Asset Vault</span>
-                <span className="sm:hidden">Asset Vault</span>
+                <span className="hidden sm:inline">{APP_BRANDING.fullName}</span>
+                <span className="sm:hidden">{APP_BRANDING.shortName}</span>
               </span>
-              <span className="text-xs text-muted-foreground hidden sm:block">BSC Secure Storage</span>
+              <span className="text-xs text-muted-foreground hidden sm:block">{APP_BRANDING.tagline}</span>
             </div>
           </div>
           

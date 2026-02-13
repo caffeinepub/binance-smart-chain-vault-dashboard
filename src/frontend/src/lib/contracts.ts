@@ -12,6 +12,8 @@ const FUNCTION_SIGNATURES: Record<string, string> = {
   withdrawToken: '0x01e33667',
   // ERC20 approve
   approve: '0x095ea7b3',
+  // ERC20 balanceOf
+  balanceOf: '0x70a08231',
 };
 
 export type ParamType = 'address' | 'uint256';
@@ -66,3 +68,6 @@ export function decodeResult(result: string, type: ParamType): string | bigint {
 
   throw new Error(`Unsupported return type: ${type}`);
 }
+
+// Re-export commonly used utilities
+export { decodeUint256 } from './evm';

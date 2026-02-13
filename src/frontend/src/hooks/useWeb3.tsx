@@ -44,7 +44,7 @@ export function Web3Provider({ children }: { children: ReactNode }) {
 
   const switchToBSC = async () => {
     if (!window.ethereum) {
-      throw new Error('MetaMask is not installed');
+      throw new Error('EVM wallet is not installed');
     }
 
     try {
@@ -86,9 +86,9 @@ export function Web3Provider({ children }: { children: ReactNode }) {
 
       if (!window.ethereum) {
         if (isMobile) {
-          setError('Please open this app in the MetaMask mobile app browser');
+          setError('Please open this app in your wallet app\'s built-in browser');
         } else {
-          setError('MetaMask is not installed. Please install MetaMask to use this app.');
+          setError('EVM wallet is not installed. Please install MetaMask or another EVM wallet to use this app.');
         }
         return;
       }
@@ -124,145 +124,189 @@ export function Web3Provider({ children }: { children: ReactNode }) {
   };
 
   /**
-   * Canonical method to call a contract (eth_call)
+   * Extract a readable error message from nested provider error structures
    */
-  const callContract = async (to: string, data: string): Promise<string> => {
-    if (!window.ethereum) {
-      throw new Error('MetaMask not available');
+  const extractErrorMessage = (error: any): string => {
+    // Try to extract nested error messages from provider responses
+    if (error?.data?.message) {
+      return error.data.message;
     }
+    if (error?.error?.message) {
+      return error.error.message;
+    }
+    if (error?.message) {
+      // Clean up common error prefixes
+      let msg = error.message;
+      if (msg.includes('execution reverted:')) {
+        const parts = msg.split('execution reverted:');
+        if (parts[1]?.trim()) {
+          return parts[1].trim();
+        }
+        return 'Contract execution reverted';
+      }
+      return msg;
+    }
+    return 'Contract call failed';
+  };
 
+  /**
+   * Fallback method to call contract via direct JSON-RPC when wallet fails
+   */
+  const callContractViaRPC = async (to: string, data: string): Promise<string> => {
     try {
-      const result = await window.ethereum.request({
-        method: 'eth_call',
-        params: [
-          {
-            to,
-            data,
-          },
-          'latest',
-        ],
+      const response = await fetch(BSC_RPC_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'eth_call',
+          params: [
+            {
+              to,
+              data,
+            },
+            'latest',
+          ],
+        }),
       });
-      return result;
-    } catch (error: any) {
-      console.error('Contract call error:', error);
-      throw new Error(error.message || 'Contract call failed');
+
+      const json = await response.json();
+
+      if (json.error) {
+        throw new Error(extractErrorMessage(json.error));
+      }
+
+      if (!json.result) {
+        throw new Error('No result returned from RPC call');
+      }
+
+      return json.result;
+    } catch (err: any) {
+      throw new Error(extractErrorMessage(err));
     }
   };
 
   /**
-   * Canonical method to send a transaction (eth_sendTransaction)
+   * Call a contract method (read-only)
+   * Uses injected provider if available, falls back to direct RPC
    */
-  const sendTransaction = async (to: string, data: string, value?: string): Promise<string> => {
-    if (!window.ethereum || !account) {
+  const callContract = async (to: string, data: string): Promise<string> => {
+    try {
+      // Try injected provider first if available
+      if (window.ethereum) {
+        try {
+          const result = await window.ethereum.request({
+            method: 'eth_call',
+            params: [
+              {
+                to,
+                data,
+              },
+              'latest',
+            ],
+          });
+          return result;
+        } catch (providerError: any) {
+          console.warn('Injected provider eth_call failed, falling back to RPC:', providerError);
+          // Fall through to RPC fallback
+        }
+      }
+
+      // Fallback to direct RPC call
+      return await callContractViaRPC(to, data);
+    } catch (err: any) {
+      throw new Error(extractErrorMessage(err));
+    }
+  };
+
+  /**
+   * Send a transaction (state-changing)
+   * Requires connected wallet
+   */
+  const sendTransaction = async (to: string, data: string, value: string = '0x0'): Promise<string> => {
+    if (!window.ethereum) {
+      throw new Error('EVM wallet is not installed');
+    }
+
+    if (!account) {
       throw new Error('Wallet not connected');
     }
 
     try {
-      const txParams: any = {
-        from: account,
-        to,
-        data,
-      };
-
-      if (value) {
-        txParams.value = value;
-      }
-
       const txHash = await window.ethereum.request({
         method: 'eth_sendTransaction',
-        params: [txParams],
+        params: [
+          {
+            from: account,
+            to,
+            data,
+            value,
+          },
+        ],
       });
+
       return txHash;
-    } catch (error: any) {
-      console.error('Transaction error:', error);
-      throw new Error(error.message || 'Transaction failed');
+    } catch (err: any) {
+      throw new Error(extractErrorMessage(err));
     }
   };
 
-  // Initialize and check for MetaMask
+  // Initialize: check for existing connection
   useEffect(() => {
-    const initialize = async () => {
+    const init = async () => {
       try {
-        // Check if MetaMask is available
-        const metamaskAvailable = typeof window.ethereum !== 'undefined';
-        setHasMetaMask(metamaskAvailable);
+        if (window.ethereum) {
+          setHasMetaMask(true);
 
-        if (!metamaskAvailable) {
-          if (isMobile) {
-            setError('Please open this app in the MetaMask mobile app browser');
-          } else {
-            setError('MetaMask is not installed. Please install MetaMask browser extension to use this app.');
-          }
-          setIsInitializing(false);
-          return;
-        }
-
-        // Check if already connected
-        try {
+          // Check if already connected
           const accounts = await window.ethereum.request({
             method: 'eth_accounts',
           });
 
           if (accounts.length > 0) {
-            const currentChainId = await window.ethereum.request({ method: 'eth_chainId' });
-            const chainIdNum = parseInt(currentChainId, 16);
-
             setAccount(accounts[0]);
-            setChainId(chainIdNum);
 
-            if (chainIdNum !== BSC_CHAIN_ID) {
-              setError('Please switch to Binance Smart Chain network');
-            }
+            const currentChainId = await window.ethereum.request({
+              method: 'eth_chainId',
+            });
+            setChainId(parseInt(currentChainId, 16));
           }
-        } catch (err) {
-          console.error('Error checking existing connection:', err);
-          // Don't set error here, just log it
+
+          // Listen for account changes
+          window.ethereum.on('accountsChanged', (accounts: string[]) => {
+            if (accounts.length === 0) {
+              disconnectWallet();
+            } else {
+              setAccount(accounts[0]);
+            }
+          });
+
+          // Listen for chain changes
+          window.ethereum.on('chainChanged', (chainId: string) => {
+            setChainId(parseInt(chainId, 16));
+          });
+        } else {
+          setHasMetaMask(false);
         }
       } catch (err) {
-        console.error('Error during Web3 initialization:', err);
-        setError('Failed to initialize Web3. Please refresh the page.');
+        console.error('Error initializing Web3:', err);
       } finally {
         setIsInitializing(false);
       }
     };
 
-    initialize();
-  }, [isMobile]);
+    init();
 
-  // Set up event listeners
-  useEffect(() => {
-    if (!window.ethereum) return;
-
-    const handleAccountsChanged = (accounts: string[]) => {
-      if (accounts.length === 0) {
-        disconnectWallet();
-      } else {
-        setAccount(accounts[0]);
+    // Cleanup listeners
+    return () => {
+      if (window.ethereum) {
+        window.ethereum.removeAllListeners('accountsChanged');
+        window.ethereum.removeAllListeners('chainChanged');
       }
     };
-
-    const handleChainChanged = (chainIdHex: string) => {
-      const newChainId = parseInt(chainIdHex, 16);
-      setChainId(newChainId);
-      
-      if (newChainId !== BSC_CHAIN_ID) {
-        setError('Please switch to Binance Smart Chain network');
-      } else {
-        setError(null);
-      }
-    };
-
-    try {
-      window.ethereum.on('accountsChanged', handleAccountsChanged);
-      window.ethereum.on('chainChanged', handleChainChanged);
-
-      return () => {
-        window.ethereum?.removeListener('accountsChanged', handleAccountsChanged);
-        window.ethereum?.removeListener('chainChanged', handleChainChanged);
-      };
-    } catch (err) {
-      console.error('Error setting up event listeners:', err);
-    }
   }, []);
 
   return (
@@ -293,10 +337,4 @@ export function useWeb3() {
     throw new Error('useWeb3 must be used within a Web3Provider');
   }
   return context;
-}
-
-declare global {
-  interface Window {
-    ethereum?: any;
-  }
 }

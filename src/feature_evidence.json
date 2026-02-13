@@ -2,10 +2,13 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-ensure-the-app-renders-without-crashing-by-wrapping-the-react-app-in-the-existing-web3provider-so-that-all-components-using-useweb3-e-g-dashboard-walletconnect-have-the-required-context",
-      "featureTitle": "Ensure the app renders without crashing by wrapping the React app in the existing `Web3Provider` so that all components using `useWeb3()` (e.g., `Dashboard`, `WalletConnect`) have the required context.",
+      "featureId": "feature-ensure-the-vault-bnb-balance-is-visible-and-updates-correctly-even-when-the-user-switches-to-the-deposit-or-withdraw-tabs-i-e-do-not-rely-on-the-balances-tab-being-mounted-for-the-bnb-balance-to-be-shown",
+      "featureTitle": "Ensure the vault BNB balance is visible and updates correctly even when the user switches to the Deposit or Withdraw tabs (i.e., do not rely on the Balances tab being mounted for the BNB balance to be shown).",
       "files": [
-        "frontend/src/App.tsx"
+        "frontend/src/components/BalanceView.tsx",
+        "frontend/src/components/DepositForm.tsx",
+        "frontend/src/components/WithdrawForm.tsx",
+        "frontend/src/pages/Dashboard.tsx"
       ],
       "components": [
         "core-infrastructure@1.0.2",
@@ -15,16 +18,15 @@
         "github-export-icp-cli@1.0.0"
       ],
       "testIds": [
-        "REQ-7"
+        "REQ-21"
       ],
       "confidence": "high"
     },
     {
-      "featureId": "feature-add-a-user-visible-error-fallback-for-unexpected-runtime-exceptions-e-g-missing-providers-or-other-uncaught-errors-so-the-preview-shows-a-readable-english-error-message-and-a-clear-recovery-action-e-g-reload-instead-of-failing-silently",
-      "featureTitle": "Add a user-visible error fallback for unexpected runtime exceptions (e.g., missing providers or other uncaught errors) so the preview shows a readable English error message and a clear recovery action (e.g., reload) instead of failing silently.",
+      "featureId": "feature-fix-the-token-contract-address-dropdown-token-selector-styling-so-that-when-the-dropdown-is-opened-it-does-not-visually-overlap-blend-with-the-amount-input-the-dropdown-must-be-fully-opaque-with-proper-layering-and-readable-contrast",
+      "featureTitle": "Fix the Token Contract Address dropdown (token selector) styling so that when the dropdown is opened it does not visually overlap/blend with the Amount input; the dropdown must be fully opaque with proper layering and readable contrast.",
       "files": [
-        "frontend/src/App.tsx",
-        "frontend/src/components/ErrorBoundary.tsx"
+        "frontend/src/components/TokenSelectorInput.tsx"
       ],
       "components": [
         "core-infrastructure@1.0.2",
@@ -34,7 +36,27 @@
         "github-export-icp-cli@1.0.0"
       ],
       "testIds": [
-        "REQ-8"
+        "REQ-22"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-update-wallet-connectivity-and-ux-copy-to-support-and-describe-connecting-via-any-injected-eip-1193-wallet-provider-e-g-metamask-trust-wallet-safepal-tokenpocket-instead-of-metamask-only-wording-connection-logic-must-work-with-window-ethereum-from-these-wallets-in-app-browsers-extension-providers",
+      "featureTitle": "Update wallet connectivity and UX copy to support and describe connecting via any injected EIP-1193 wallet provider (e.g., MetaMask, Trust Wallet, SafePal, TokenPocket) instead of MetaMask-only wording; connection logic must work with `window.ethereum` from these wallets’ in-app browsers/extension providers.",
+      "files": [
+        "frontend/src/components/WalletConnect.tsx",
+        "frontend/src/hooks/useWeb3.tsx",
+        "frontend/src/pages/Dashboard.tsx"
+      ],
+      "components": [
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-23"
       ],
       "confidence": "high"
     }

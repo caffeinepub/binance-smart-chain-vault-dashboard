@@ -1,47 +1,67 @@
 import { useState } from 'react';
-import { RefreshCw, Plus, Coins, X } from 'lucide-react';
+import { RefreshCw, Plus, Coins, X, AlertCircle, TrendingUp, Info, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { useVaultBalances } from '@/hooks/useVaultBalances';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useWatchedTokens } from '@/hooks/useWatchedTokens';
+import { useSavedTokenCatalog } from '@/hooks/useSavedTokenCatalog';
+import { useBalanceValuations } from '@/hooks/useBalanceValuations';
+import { useWeb3 } from '@/hooks/useWeb3';
 import { toast } from 'sonner';
 
-export default function BalanceView() {
-  const { bnbBalance, tokenBalances, isLoading, refetch } = useVaultBalances();
+interface BalanceViewProps {
+  vaultBalances: ReturnType<typeof import('@/hooks/useVaultBalances').useVaultBalances>;
+}
+
+export default function BalanceView({ vaultBalances }: BalanceViewProps) {
+  const { isConnected, chainId } = useWeb3();
+  const { bnbBalance, bnbBalanceRaw, bnbError, tokenBalances, isLoading, refetch, error: fetchError } = vaultBalances;
   const { tokens: watchedTokens, addToken, removeToken } = useWatchedTokens();
+  const { setTokenLabel, removeTokenLabel, getTokenLabel } = useSavedTokenCatalog();
+  const { bnbValuation, tokenValuations, isLoading: isLoadingPrices } = useBalanceValuations(
+    bnbBalanceRaw,
+    tokenBalances
+  );
   const [newTokenAddress, setNewTokenAddress] = useState('');
+  const [newTokenLabel, setNewTokenLabel] = useState('');
   const [isAddingToken, setIsAddingToken] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const BSC_CHAIN_ID = 56;
+  const isWrongNetwork = chainId !== null && chainId !== BSC_CHAIN_ID;
 
   const handleRefresh = async () => {
-    toast.promise(refetch(), {
-      loading: 'Refreshing balances...',
-      success: 'Balances updated',
-      error: 'Failed to refresh balances',
-    });
+    setIsRefreshing(true);
+    try {
+      await refetch();
+      toast.success('Balances updated');
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to refresh balances');
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   const handleAddToken = () => {
-    if (!newTokenAddress || !newTokenAddress.startsWith('0x')) {
-      toast.error('Please enter a valid token address');
+    if (!newTokenAddress.trim()) {
+      toast.error('Please enter a token address');
       return;
     }
     
     setIsAddingToken(true);
     try {
-      const added = addToken(newTokenAddress);
-      if (added) {
-        toast.success('Token added to watch list');
-        setNewTokenAddress('');
-        // Trigger refetch after a short delay
-        setTimeout(() => refetch(), 500);
-      } else {
-        toast.info('Token is already in watch list');
-      }
+      addToken(newTokenAddress);
+      // Save the label (or fallback if empty)
+      setTokenLabel(newTokenAddress, newTokenLabel);
+      toast.success('Token added to watch list');
+      setNewTokenAddress('');
+      setNewTokenLabel('');
     } catch (error: any) {
+      // Display the descriptive error message from normalizeAddress
       toast.error(error.message || 'Invalid token address');
     } finally {
       setIsAddingToken(false);
@@ -50,11 +70,49 @@ export default function BalanceView() {
 
   const handleRemoveToken = (address: string) => {
     removeToken(address);
+    removeTokenLabel(address);
     toast.success('Token removed from watch list');
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleAddToken();
+    }
   };
 
   return (
     <div className="space-y-6">
+      {/* Read-only mode info */}
+      {!isConnected && (
+        <Alert>
+          <Info className="h-4 w-4" />
+          <AlertTitle>Read-Only Mode</AlertTitle>
+          <AlertDescription>
+            Viewing balances in read-only mode. Connect your wallet to deposit or withdraw tokens.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Wrong network info */}
+      {isConnected && isWrongNetwork && (
+        <Alert>
+          <Info className="h-4 w-4" />
+          <AlertTitle>Viewing Balances on Wrong Network</AlertTitle>
+          <AlertDescription>
+            You're viewing balances in read-only mode. Switch to BSC network to perform deposits or withdrawals.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Top-level fetch error */}
+      {fetchError && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Failed to Load Balances</AlertTitle>
+          <AlertDescription>{fetchError}</AlertDescription>
+        </Alert>
+      )}
+
       {/* BNB Balance Card */}
       <Card className="border-2 border-chart-1/30 bg-gradient-to-br from-chart-1/5 to-transparent">
         <CardHeader>
@@ -70,20 +128,36 @@ export default function BalanceView() {
               variant="outline"
               size="icon"
               onClick={handleRefresh}
-              disabled={isLoading}
+              disabled={isLoading || isRefreshing}
               className="rounded-full min-h-[44px] min-w-[44px]"
             >
-              <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`h-4 w-4 ${isLoading || isRefreshing ? 'animate-spin' : ''}`} />
             </Button>
           </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (
             <Skeleton className="h-12 w-48" />
+          ) : bnbError ? (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{bnbError}</AlertDescription>
+            </Alert>
           ) : (
-            <div className="space-y-1">
+            <div className="space-y-2">
               <p className="text-3xl md:text-4xl font-bold">{bnbBalance} BNB</p>
               <p className="text-sm text-muted-foreground">Binance Coin</p>
+              {bnbValuation.usdValue && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <TrendingUp className="h-4 w-4" />
+                  <span>≈ ${bnbValuation.usdValue} USDT</span>
+                </div>
+              )}
+              {bnbValuation.error && !isLoadingPrices && (
+                <p className="text-xs text-muted-foreground">
+                  Price unavailable: {bnbValuation.error}
+                </p>
+              )}
             </div>
           )}
         </CardContent>
@@ -92,80 +166,144 @@ export default function BalanceView() {
       {/* Token Balances */}
       <Card>
         <CardHeader>
-          <CardTitle>BEP20 Token Balances</CardTitle>
-          <CardDescription>View balances of BEP20 tokens in the vault</CardDescription>
+          <CardTitle>Token Balances</CardTitle>
+          <CardDescription>BEP20 tokens in vault</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Add Token Input */}
-          <div className="space-y-2">
-            <Label htmlFor="tokenAddress">Add Token to Watch</Label>
-            <div className="flex gap-2">
-              <Input
-                id="tokenAddress"
-                placeholder="0x... (Token Contract Address)"
-                value={newTokenAddress}
-                onChange={(e) => setNewTokenAddress(e.target.value)}
-                className="font-mono text-sm"
-              />
-              <Button
-                onClick={handleAddToken}
-                disabled={isAddingToken || !newTokenAddress}
-                size="icon"
-                className="shrink-0 min-h-[44px] min-w-[44px]"
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
+          {isLoading ? (
+            <div className="space-y-3">
+              <Skeleton className="h-16 w-full" />
+              <Skeleton className="h-16 w-full" />
             </div>
+          ) : tokenBalances.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <p>No tokens being watched</p>
+              <p className="text-sm mt-2">Add token addresses below to track their balances</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {tokenBalances.map((token) => {
+                const label = getTokenLabel(token.address);
+                const valuation = tokenValuations[token.address];
+                
+                return (
+                  <div
+                    key={token.address}
+                    className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/5 transition-colors"
+                  >
+                    <div className="flex-1 min-w-0 space-y-1">
+                      <div className="flex items-center gap-2">
+                        <p className="font-semibold">{label}</p>
+                        <Badge variant="outline" className="text-xs">
+                          {token.symbol}
+                        </Badge>
+                      </div>
+                      <p className="text-sm font-mono text-muted-foreground truncate">
+                        {token.address}
+                      </p>
+                      {token.error ? (
+                        <Alert variant="destructive" className="mt-2">
+                          <AlertCircle className="h-3 w-3" />
+                          <AlertDescription className="text-xs">{token.error}</AlertDescription>
+                        </Alert>
+                      ) : (
+                        <>
+                          <p className="text-lg font-bold">{token.balance}</p>
+                          {valuation?.usdValue && (
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <TrendingUp className="h-3 w-3" />
+                              <span>≈ ${valuation.usdValue} USDT</span>
+                            </div>
+                          )}
+                          {valuation?.bnbValue && (
+                            <p className="text-xs text-muted-foreground">
+                              ≈ {valuation.bnbValue} BNB
+                            </p>
+                          )}
+                          {valuation?.error && !isLoadingPrices && (
+                            <p className="text-xs text-muted-foreground">
+                              Price unavailable
+                            </p>
+                          )}
+                        </>
+                      )}
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleRemoveToken(token.address)}
+                      className="ml-2 text-destructive hover:text-destructive hover:bg-destructive/10 min-h-[44px] min-w-[44px]"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Add Token Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Plus className="h-5 w-5" />
+            Add Token to Watch List
+          </CardTitle>
+          <CardDescription>
+            Track BEP20 token balances in the vault
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="tokenLabel">Token Label (Optional)</Label>
+            <Input
+              id="tokenLabel"
+              placeholder="e.g., USDT, BUSD, My Token"
+              value={newTokenLabel}
+              onChange={(e) => setNewTokenLabel(e.target.value)}
+              onKeyPress={handleKeyPress}
+              disabled={isAddingToken}
+            />
+            <p className="text-xs text-muted-foreground">
+              Give this token a friendly name for easy identification
+            </p>
           </div>
 
-          {/* Token List */}
-          <div className="space-y-3">
-            {isLoading ? (
-              <>
-                <Skeleton className="h-20 w-full" />
-                <Skeleton className="h-20 w-full" />
-              </>
-            ) : watchedTokens.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <p>No tokens added yet</p>
-                <p className="text-sm mt-1">Add a token address above to view its balance</p>
-              </div>
-            ) : (
-              tokenBalances.map((token, index) => (
-                <Card key={index} className="bg-muted/30">
-                  <CardContent className="pt-4">
-                    <div className="flex items-center justify-between gap-4">
-                      <div className="space-y-1 flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="font-semibold">{token.symbol || 'Unknown'}</p>
-                          <Badge variant="outline" className="text-xs">
-                            BEP20
-                          </Badge>
-                        </div>
-                        <p className="text-xs text-muted-foreground font-mono truncate">
-                          {token.address}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="text-right">
-                          <p className="text-xl font-bold">{token.balance}</p>
-                          <p className="text-xs text-muted-foreground">{token.symbol}</p>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleRemoveToken(token.address)}
-                          className="shrink-0 h-8 w-8"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
-            )}
+          <div className="space-y-2">
+            <Label htmlFor="tokenAddress">Token Contract Address</Label>
+            <Input
+              id="tokenAddress"
+              placeholder="0x..."
+              value={newTokenAddress}
+              onChange={(e) => setNewTokenAddress(e.target.value)}
+              onKeyPress={handleKeyPress}
+              className="font-mono text-sm"
+              disabled={isAddingToken}
+            />
+            <p className="text-xs text-muted-foreground">
+              Enter the BEP20 token contract address on BSC
+            </p>
           </div>
+
+          <Button
+            onClick={handleAddToken}
+            disabled={isAddingToken || !newTokenAddress}
+            className="w-full min-h-[44px]"
+          >
+            {isAddingToken ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Adding...
+              </>
+            ) : (
+              <>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Token
+              </>
+            )}
+          </Button>
         </CardContent>
       </Card>
     </div>

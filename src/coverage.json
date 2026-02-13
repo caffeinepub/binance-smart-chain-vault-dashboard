@@ -1,37 +1,57 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-13T17:35:59.612Z",
+  "generatedAt": "2026-02-13T18:38:09.520Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
   },
   "requirements": {
-    "total": 2,
-    "implemented": 2,
+    "total": 3,
+    "implemented": 3,
     "items": [
       {
-        "id": "REQ-7",
-        "summary": "Ensure the app renders without crashing by wrapping the React app in the existing `Web3Provider` so that all components using `useWeb3()` (e.g., `Dashboard`, `WalletConnect`) have the required context.",
+        "id": "REQ-21",
+        "summary": "Ensure the vault BNB balance is visible and updates correctly even when the user switches to the Deposit or Withdraw tabs (i.e., do not rely on the Balances tab being mounted for the BNB balance to be shown).",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/App.tsx"
+          "frontend/src/pages/Dashboard.tsx",
+          "frontend/src/hooks/useVaultBalances.ts",
+          "frontend/src/components/DepositForm.tsx",
+          "frontend/src/components/WithdrawForm.tsx",
+          "frontend/src/components/BalanceView.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/App.tsx"
+          "frontend/src/pages/Dashboard.tsx",
+          "frontend/src/components/DepositForm.tsx",
+          "frontend/src/components/WithdrawForm.tsx",
+          "frontend/src/components/BalanceView.tsx"
         ]
       },
       {
-        "id": "REQ-8",
-        "summary": "Add a user-visible error fallback for unexpected runtime exceptions (e.g., missing providers or other uncaught errors) so the preview shows a readable English error message and a clear recovery action (e.g., reload) instead of failing silently.",
+        "id": "REQ-22",
+        "summary": "Fix the Token Contract Address dropdown (token selector) styling so that when the dropdown is opened it does not visually overlap/blend with the Amount input; the dropdown must be fully opaque with proper layering and readable contrast.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/components/ErrorBoundary.tsx",
-          "frontend/src/App.tsx"
+          "frontend/src/components/TokenSelectorInput.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/components/ErrorBoundary.tsx",
-          "frontend/src/App.tsx"
+          "frontend/src/components/TokenSelectorInput.tsx"
+        ]
+      },
+      {
+        "id": "REQ-23",
+        "summary": "Update wallet connectivity and UX copy to support and describe connecting via any injected EIP-1193 wallet provider (e.g., MetaMask, Trust Wallet, SafePal, TokenPocket) instead of MetaMask-only wording; connection logic must work with `window.ethereum` from these wallets’ in-app browsers/extension providers.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/hooks/useWeb3.tsx",
+          "frontend/src/components/WalletConnect.tsx",
+          "frontend/src/pages/Dashboard.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/hooks/useWeb3.tsx",
+          "frontend/src/components/WalletConnect.tsx",
+          "frontend/src/pages/Dashboard.tsx"
         ]
       }
     ]
@@ -41,8 +61,14 @@
     "feature_evidence.json",
     "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
-    "frontend/src/App.tsx",
-    "frontend/src/components/ErrorBoundary.tsx",
+    "frontend/src/components/BalanceView.tsx",
+    "frontend/src/components/DepositForm.tsx",
+    "frontend/src/components/TokenSelectorInput.tsx",
+    "frontend/src/components/WalletConnect.tsx",
+    "frontend/src/components/WithdrawForm.tsx",
+    "frontend/src/global.d.ts",
+    "frontend/src/hooks/useWeb3.tsx",
+    "frontend/src/pages/Dashboard.tsx",
     "project_state.json",
     "scratch/component-selection.json",
     "spec.md",

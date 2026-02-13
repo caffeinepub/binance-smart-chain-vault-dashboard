@@ -1,42 +1,83 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Wire Web3Provider globally and add crash-safe runtime error fallback",
+  "title": "Fix vault BNB balance rendering across tabs, token selector dropdown layering, and injected-wallet-agnostic UX copy",
   "requirements": [
     {
-      "id": "REQ-7",
-      "summary": "Wrap the app with the existing Web3Provider so all useWeb3() consumers render safely in draft/preview.",
+      "id": "REQ-21",
+      "summary": "Make vault BNB balance fetch/render independent of the Balances tab so it stays visible and updates on Deposit/Withdraw tabs, including in-UI error states.",
       "acceptanceCriteria": [
-        "Opening the draft/preview no longer shows a blank screen or immediate runtime crash.",
-        "`useWeb3()` no longer throws `useWeb3 must be used within a Web3Provider` during initial render.",
-        "On load, the Dashboard displays either the initialization skeleton or the wallet connection UI, depending on environment."
+        "When the user navigates to the Deposit tab, the UI shows the current vault BNB balance (or a loading/error state) without requiring the user to return to the Balances tab.",
+        "When the user navigates to the Withdraw tab, the UI shows the current vault BNB balance (or a loading/error state) without requiring the user to return to the Balances tab.",
+        "If fetching the BNB balance fails, a clear English error message is shown in the same area where the balance would appear (not only in console logs)."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/App.tsx",
+          "path": "frontend/src/pages/Dashboard.tsx",
           "operation": "modify",
-          "description": "Wrap the existing app content in the existing Web3Provider from frontend/src/hooks/useWeb3.tsx so Dashboard and WalletConnect always have the required context. Keep existing ThemeProvider and Toaster behavior unchanged. Verify the component's usage instructions before implementing."
+          "description": "Lift vault balance fetching to the tab parent so it continues to load/show regardless of which tab is mounted; pass the shared vault BNB balance/loading/error state down to Deposit and Withdraw tab content (and Balances tab as needed) to avoid relying on the Balances tab being mounted."
+        },
+        {
+          "path": "frontend/src/hooks/useVaultBalances.ts",
+          "operation": "modify",
+          "description": "Adjust the hook to better support being used as a shared data source across tabs (e.g., ensure BNB balance can be fetched and refreshed without depending on the Balances tab lifecycle; keep existing token watch dependency behavior intact)."
+        },
+        {
+          "path": "frontend/src/components/DepositForm.tsx",
+          "operation": "modify",
+          "description": "Render a small 'Vault BNB balance' readout (loading/error/loaded) within the Deposit form using the shared balance state passed from Dashboard, so users can see the vault’s BNB balance while on the Deposit tab."
+        },
+        {
+          "path": "frontend/src/components/WithdrawForm.tsx",
+          "operation": "modify",
+          "description": "Render a 'Vault BNB balance' readout (loading/error/loaded) within the Withdraw form using the shared balance state passed from Dashboard, so users can see the vault’s BNB balance while on the Withdraw tab. Show any fetch failure as a clear English message in the same area."
+        },
+        {
+          "path": "frontend/src/components/BalanceView.tsx",
+          "operation": "modify",
+          "description": "Refactor BalanceView to optionally consume the shared vault balance state (instead of always fetching locally) so the BNB balance view remains consistent with the data shown on Deposit/Withdraw and avoids duplicate fetching."
         }
       ]
     },
     {
-      "id": "REQ-8",
-      "summary": "Add a user-visible error fallback UI for unexpected runtime exceptions with a clear recovery action.",
+      "id": "REQ-22",
+      "summary": "Fix Token Contract Address dropdown visual overlap by making the selector dropdown fully opaque with correct stacking and readable contrast in light/dark themes.",
       "acceptanceCriteria": [
-        "If an uncaught error occurs during render, the UI shows a friendly error card/page in English with a reload action.",
-        "The error fallback does not depend on editing any files in `frontend/src/components/ui` or other immutable paths.",
-        "Normal operation (no errors) is unaffected; the dashboard experience remains the same when no exception is thrown."
+        "Opening the Token Contract Address dropdown in Deposit shows a fully opaque dropdown menu (no transparency bleed-through from the Amount input underneath).",
+        "Opening the Token Contract Address dropdown in Withdraw Token shows a fully opaque dropdown menu (no transparency bleed-through from the Amount input underneath).",
+        "The dropdown menu renders above other form fields (correct z-index/stacking) and remains readable in both light and dark themes."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/components/ErrorBoundary.tsx",
-          "operation": "create",
-          "description": "Create a reusable React error boundary component that catches render-time exceptions and renders a friendly fallback UI. The fallback should present a readable English message and a primary recovery action to reload the page, and may include an optional expandable details section for the error message/stack. Use shadcn-ui components (e.g., Card/Button/Alert) for consistent styling without modifying immutable `frontend/src/components/ui/*` files. Verify the component's usage instructions before implementing."
+          "path": "frontend/src/components/TokenSelectorInput.tsx",
+          "operation": "modify",
+          "description": "Update the PopoverContent styling to enforce an opaque background, proper border/shadow, and higher stacking order (z-index) so the dropdown renders above the Amount input and remains readable in light/dark themes. Use (compose) the existing shadcn-ui Popover/Command components without editing files under frontend/src/components/ui. Verify the component's usage instructions before implementing."
+        }
+      ]
+    },
+    {
+      "id": "REQ-23",
+      "summary": "Make wallet-connect UX copy and detection logic provider-agnostic for any injected EIP-1193 wallet (MetaMask, Trust Wallet, SafePal, TokenPocket, etc.) while keeping injected-provider-only connectivity.",
+      "acceptanceCriteria": [
+        "If `window.ethereum` is present from a non-MetaMask wallet, the app can connect and proceed using the same connect/switch-network flow.",
+        "All user-facing text in the wallet-connect flow uses wallet-agnostic language (e.g., “EVM wallet” / “your wallet”) and may mention examples (MetaMask, Trust Wallet, SafePal, TokenPocket) without implying only MetaMask works.",
+        "On mobile with no injected provider detected, the guidance text instructs users to open the dApp inside their wallet’s built-in browser (with example wallets), while still keeping the existing MetaMask install/download link as an option."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/hooks/useWeb3.tsx",
+          "operation": "modify",
+          "description": "Update injected-provider detection and error messaging to be wallet-agnostic (treat window.ethereum as a generic injected EIP-1193 provider). Ensure connect/switch-network flows work with non-MetaMask injected providers and avoid MetaMask-only assumptions in thrown/set error strings."
         },
         {
-          "path": "frontend/src/App.tsx",
+          "path": "frontend/src/components/WalletConnect.tsx",
           "operation": "modify",
-          "description": "Wire the new ErrorBoundary around the app's rendered tree (inside existing providers) so unexpected runtime exceptions render the friendly crash screen instead of a blank page. Ensure normal operation is unaffected when no exception is thrown. Verify the component's usage instructions before implementing."
+          "description": "Update wallet-connect UI copy to refer to an 'EVM wallet' / 'your wallet' and include example wallets (MetaMask, Trust Wallet, SafePal, TokenPocket). For mobile with no injected provider, change guidance to instruct opening the dApp inside a wallet’s built-in browser while still offering the existing MetaMask download link. Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/pages/Dashboard.tsx",
+          "operation": "modify",
+          "description": "Replace MetaMask-only alert titles/descriptions with wallet-agnostic injected-wallet language wherever provider detection is shown (mobile and desktop), while keeping network warnings and the existing MetaMask install link as an option. Verify the component's usage instructions before implementing."
         }
       ]
     }

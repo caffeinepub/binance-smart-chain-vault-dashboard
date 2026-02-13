@@ -1,66 +1,76 @@
 {
   "kind": "build_request",
-  "title": "Fix draft/preview not loading by wiring Web3Provider and adding a safe crash screen",
-  "priority": "high",
+  "title": "Fix BNB balance visibility across tabs, token selector dropdown overlap, and broaden injected-wallet support messaging",
+  "priority": "normal",
   "requirements": [
     {
-      "id": "REQ-7",
-      "text": "Ensure the app renders without crashing by wrapping the React app in the existing `Web3Provider` so that all components using `useWeb3()` (e.g., `Dashboard`, `WalletConnect`) have the required context.",
+      "id": "REQ-21",
+      "text": "Ensure the vault BNB balance is visible and updates correctly even when the user switches to the Deposit or Withdraw tabs (i.e., do not rely on the Balances tab being mounted for the BNB balance to be shown).",
       "target": "frontend",
       "source": {
         "messageIds": [
           "msg-4"
         ],
         "quotes": [
-          "draft is not working"
+          "Token balance is showing now but bnb balance is not showing second when we open deposit or withdrawal option"
         ]
       },
       "acceptanceCriteria": [
-        "Opening the draft/preview no longer shows a blank screen or immediate runtime crash.",
-        "`useWeb3()` no longer throws `useWeb3 must be used within a Web3Provider` during initial render.",
-        "On load, the Dashboard displays either the initialization skeleton or the wallet connection UI, depending on environment."
+        "When the user navigates to the Deposit tab, the UI shows the current vault BNB balance (or a loading/error state) without requiring the user to return to the Balances tab.",
+        "When the user navigates to the Withdraw tab, the UI shows the current vault BNB balance (or a loading/error state) without requiring the user to return to the Balances tab.",
+        "If fetching the BNB balance fails, a clear English error message is shown in the same area where the balance would appear (not only in console logs)."
       ]
     },
     {
-      "id": "REQ-8",
-      "text": "Add a user-visible error fallback for unexpected runtime exceptions (e.g., missing providers or other uncaught errors) so the preview shows a readable English error message and a clear recovery action (e.g., reload) instead of failing silently.",
+      "id": "REQ-22",
+      "text": "Fix the Token Contract Address dropdown (token selector) styling so that when the dropdown is opened it does not visually overlap/blend with the Amount input; the dropdown must be fully opaque with proper layering and readable contrast.",
       "target": "frontend",
       "source": {
         "messageIds": [
           "msg-4"
         ],
         "quotes": [
-          "draft is not working"
+          "in token contract section when we click on drop down contract address it overlap on amount because these are same in transparent color so please make it proper visible."
         ]
       },
       "acceptanceCriteria": [
-        "If an uncaught error occurs during render, the UI shows a friendly error card/page in English with a reload action.",
-        "The error fallback does not depend on editing any files in `frontend/src/components/ui` or other immutable paths.",
-        "Normal operation (no errors) is unaffected; the dashboard experience remains the same when no exception is thrown."
+        "Opening the Token Contract Address dropdown in Deposit shows a fully opaque dropdown menu (no transparency bleed-through from the Amount input underneath).",
+        "Opening the Token Contract Address dropdown in Withdraw Token shows a fully opaque dropdown menu (no transparency bleed-through from the Amount input underneath).",
+        "The dropdown menu renders above other form fields (correct z-index/stacking) and remains readable in both light and dark themes."
+      ]
+    },
+    {
+      "id": "REQ-23",
+      "text": "Update wallet connectivity and UX copy to support and describe connecting via any injected EIP-1193 wallet provider (e.g., MetaMask, Trust Wallet, SafePal, TokenPocket) instead of MetaMask-only wording; connection logic must work with `window.ethereum` from these wallets’ in-app browsers/extension providers.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-4"
+        ],
+        "quotes": [
+          "One more think I want this dapp to connect with any wallet like safepal, trust wallet, metamask, token pocket etc."
+        ]
+      },
+      "acceptanceCriteria": [
+        "If `window.ethereum` is present from a non-MetaMask wallet, the app can connect and proceed using the same connect/switch-network flow.",
+        "All user-facing text in the wallet-connect flow uses wallet-agnostic language (e.g., “EVM wallet” / “your wallet”) and may mention examples (MetaMask, Trust Wallet, SafePal, TokenPocket) without implying only MetaMask works.",
+        "On mobile with no injected provider detected, the guidance text instructs users to open the dApp inside their wallet’s built-in browser (with example wallets), while still keeping the existing MetaMask install/download link as an option."
       ]
     }
   ],
   "constraints": [
-    "Do not edit files in immutable paths: `frontend/src/hooks/useInternetIdentity.ts`, `frontend/src/hooks/useInternetIdentity.tsx`, `frontend/src/hooks/useActor.ts`, `frontend/src/main.tsx`, `frontend/src/components/ui`, `frontend/src/main.tsx`.",
-    "Keep the backend as single-actor Motoko architecture; no new backend services."
+    "Do not edit any files under frontend/src/components/ui (shadcn components are read-only and must be composed).",
+    "Backend remains unchanged (no new Motoko logic required for these UI/Web3 fixes).",
+    "Do not add WalletConnect or other third-party wallet connection SDKs (support must be via injected `window.ethereum` providers).",
+    "Use English for all user-facing text."
   ],
   "nonGoals": [
-    "Adding WalletConnect or any new wallet providers (not requested).",
-    "Changing contract address/ABI or vault interaction logic.",
-    "Implementing new backend persistence or data models."
+    "Implementing WalletConnect-based connectivity for non-injected wallets.",
+    "Adding support for non-EVM wallets or non-BSC networks.",
+    "Changing the vault contract address or ABI methods."
   ],
   "imageRequirements": {
     "required": [],
     "edits": []
-  },
-  "userProfileUpdate": {
-    "goalsToAdd": [],
-    "goalsToRemove": [],
-    "preferencesToAdd": [],
-    "preferencesToRemove": [],
-    "miscToAdd": [],
-    "miscToRemove": [],
-    "fieldsToSet": {},
-    "fieldsToDelete": []
   }
 }

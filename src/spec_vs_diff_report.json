@@ -1,23 +1,38 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-02-13T17:35:59.608Z",
-  "summary": "REQ-7 and REQ-8 appear implemented by wrapping the app with the existing Web3Provider and introducing an ErrorBoundary that renders a friendly English error UI with a reload action. No immutable-path files are shown as edited in the diff summary.",
+  "generatedAt": "2026-02-13T18:38:09.517Z",
+  "summary": "Diff implements cross-tab vault balance fetching by lifting `useVaultBalances()` to `Dashboard` and passing shared state into `DepositForm`, `WithdrawForm`, and `BalanceView`. It also updates the token selector popover styling to be opaque and layered, and updates wallet-connect UX copy to be more injected-wallet/EVM-wallet agnostic with mobile guidance for in-wallet browsers.",
   "missing_requirements": [],
   "hallucinated_features": [
     {
-      "description": "Error fallback includes an optional “Show technical details” section exposing the React component stack trace.",
-      "reason": "REQ-8 asked for a friendly English error message and a clear recovery action (reload). It did not request exposing technical details/component stack to end users.",
+      "description": "Added a reusable TokenSelectorInput with manual-entry vs saved-token toggle behavior (beyond just fixing dropdown opacity/overlap).",
+      "reason": "REQ-22 only requests styling fixes to prevent dropdown overlap/bleed-through; the diff adds additional interaction modes and UI behavior not explicitly requested.",
       "evidence": [
-        "frontend/src/components/ErrorBoundary.tsx"
+        "frontend/src/components/TokenSelectorInput.tsx",
+        "frontend/src/components/DepositForm.tsx",
+        "frontend/src/components/WithdrawForm.tsx"
+      ]
+    },
+    {
+      "description": "Added global TypeScript declaration for `window.ethereum`.",
+      "reason": "Not requested explicitly by REQ-21/22/23 (though it supports injected-provider work).",
+      "evidence": [
+        "frontend/src/global.d.ts"
       ]
     }
   ],
-  "confidence": 0.74,
+  "confidence": 0.72,
   "changed_files": [
     "frontend-file-summaries.txt",
-    "frontend/src/App.tsx",
-    "frontend/src/components/ErrorBoundary.tsx",
+    "frontend/src/components/BalanceView.tsx",
+    "frontend/src/components/DepositForm.tsx",
+    "frontend/src/components/TokenSelectorInput.tsx",
+    "frontend/src/components/WalletConnect.tsx",
+    "frontend/src/components/WithdrawForm.tsx",
+    "frontend/src/global.d.ts",
+    "frontend/src/hooks/useWeb3.tsx",
+    "frontend/src/pages/Dashboard.tsx",
     "project_state.json"
   ]
 }

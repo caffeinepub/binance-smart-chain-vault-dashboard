@@ -32,7 +32,7 @@ export default function WalletConnect() {
     }
   };
 
-  // If MetaMask is not available on mobile, show mobile-specific instructions
+  // If wallet is not available on mobile, show mobile-specific instructions
   if (!hasMetaMask && isMobile) {
     return (
       <div className="space-y-4">
@@ -44,18 +44,28 @@ export default function WalletConnect() {
           </div>
           
           <div className="space-y-2">
-            <h2 className="text-2xl font-bold">Open in MetaMask Browser</h2>
+            <h2 className="text-2xl font-bold">Open in Wallet Browser</h2>
             <p className="text-muted-foreground text-sm max-w-md mx-auto">
-              To use this dApp on mobile, you need to open it inside the MetaMask mobile app's built-in browser.
+              To use this dApp on mobile, open it inside your wallet app's built-in browser.
             </p>
           </div>
 
           <div className="pt-4 space-y-3 text-sm">
             <div className="bg-muted/50 rounded-lg p-4 text-left space-y-2">
+              <p className="font-semibold">Supported wallets:</p>
+              <ul className="list-disc list-inside space-y-1 ml-2 text-muted-foreground">
+                <li>MetaMask</li>
+                <li>Trust Wallet</li>
+                <li>SafePal</li>
+                <li>TokenPocket</li>
+                <li>Other EVM-compatible wallets</li>
+              </ul>
+            </div>
+            <div className="bg-muted/50 rounded-lg p-4 text-left space-y-2">
               <p className="font-semibold">Steps to access:</p>
               <ol className="list-decimal list-inside space-y-1 ml-2 text-muted-foreground">
-                <li>Open the MetaMask mobile app</li>
-                <li>Tap the browser icon (three horizontal lines)</li>
+                <li>Open your wallet app</li>
+                <li>Tap the browser icon</li>
                 <li>Enter this URL in the browser</li>
                 <li>Connect your wallet when prompted</li>
               </ol>
@@ -81,7 +91,7 @@ export default function WalletConnect() {
     );
   }
 
-  // If MetaMask is not available on desktop
+  // If wallet is not available on desktop
   if (!hasMetaMask) {
     return (
       <div className="space-y-4">
@@ -93,9 +103,12 @@ export default function WalletConnect() {
           </div>
           
           <div className="space-y-2">
-            <h2 className="text-2xl font-bold">MetaMask Required</h2>
+            <h2 className="text-2xl font-bold">EVM Wallet Required</h2>
             <p className="text-muted-foreground text-sm max-w-md mx-auto">
-              This application requires MetaMask browser extension to connect to the Binance Smart Chain network.
+              This application requires an EVM-compatible wallet extension to connect to the Binance Smart Chain network.
+            </p>
+            <p className="text-muted-foreground text-xs max-w-md mx-auto">
+              Supported: MetaMask, Trust Wallet, SafePal, TokenPocket, and other injected EVM wallets
             </p>
           </div>
 
@@ -115,7 +128,7 @@ export default function WalletConnect() {
           </Button>
 
           <div className="pt-4 space-y-2 text-xs text-muted-foreground">
-            <p>After installing MetaMask:</p>
+            <p>After installing your wallet:</p>
             <p>• Refresh this page</p>
             <p>• Click "Connect Wallet"</p>
             <p>• Approve the connection request</p>
@@ -180,7 +193,7 @@ export default function WalletConnect() {
         <div className="space-y-2">
           <h2 className="text-2xl font-bold">Connect Your Wallet</h2>
           <p className="text-muted-foreground text-sm">
-            Connect your MetaMask wallet to access the BSC Vault Dashboard
+            Connect your EVM wallet to access the BSC Vault Dashboard
           </p>
         </div>
 
@@ -211,7 +224,7 @@ export default function WalletConnect() {
         )}
 
         <div className="pt-4 space-y-2 text-xs text-muted-foreground">
-          <p>• Make sure MetaMask is installed</p>
+          <p>• Make sure your wallet is installed</p>
           <p>• Switch to Binance Smart Chain network</p>
           <p>• Approve the connection request</p>
         </div>

@@ -1,67 +1,56 @@
 {
   "kind": "build_request",
-  "title": "Restore app name/identifier to match Version 14 (or lower) naming",
+  "title": "Fix stuck Vault Balances refresh spinner and ensure Connect Wallet UI shows (wrong-network handling)",
   "priority": "high",
   "requirements": [
     {
-      "id": "REQ-1",
-      "text": "Restore the app’s visible name/branding everywhere it appears so it matches the naming used in Version 14 (or lower), and ensure the name is consistent across the app shell and UI. This includes at minimum the HTML document title and metadata, the boot fallback screen title text, and the in-app header/footer branding.",
+      "id": "REQ-4",
+      "text": "Ensure the wallet connection UI is always visible when the user is not connected OR when the wallet is connected to the wrong network (not BSC Mainnet, chainId 56). Specifically: on the Dashboard, render the existing WalletConnect component when (a) no account is connected or (b) an account is connected but chainId != 56, and hide/disable balance + vault operation panels until the user is on BSC.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-1"
+          "msg-3"
         ],
         "quotes": [
-          "may be we have changed the name so please make it as used in v14 or lower"
+          "Vault Balances Refresh button ghumi ja rha balance show nahi ho rha nahi connect wallet ka button show ho rha hai"
         ]
       },
       "acceptanceCriteria": [
-        "Browser tab title matches the Version 14 (or lower) app name.",
-        "Boot fallback screen title text uses the Version 14 (or lower) app name consistently.",
-        "In-app header branding text uses the Version 14 (or lower) app name consistently (including responsive variants like short names).",
-        "In-app footer branding text uses the Version 14 (or lower) app name consistently.",
-        "All user-facing naming text is in English."
+        "If no wallet is connected, the Dashboard shows the WalletConnect card with a visible \"Connect Wallet\" button.",
+        "If a wallet is connected but chainId is not 56, the Dashboard shows the WalletConnect \"Wrong Network\" UI (including the \"Switch to BSC Network\" button) and does not show the balances/operations panels.",
+        "If a wallet is connected and chainId is 56, the WalletConnect UI is hidden and the balances/operations panels render as normal."
       ]
     },
     {
-      "id": "REQ-2",
-      "text": "Audit and revert any name-derived identifiers that can break loading when renamed (e.g., build identifier strings, hostname/app identifier derivations used in links, or other name-coupled values referenced at startup), restoring them to the Version 14 (or lower) values so the deployed app loads successfully.",
+      "id": "REQ-5",
+      "text": "Prevent Vault Balances from getting stuck in a perpetual refreshing/loading state and ensure balances either display or show a clear error. Update the balance fetching logic so that: (1) balance fetching is skipped with a clear, user-facing error message when the wallet is not on BSC (chainId != 56), (2) refresh/polling cannot leave `isRefreshing` true indefinitely, and (3) any stalled RPC fetches time out and resolve into an error state instead of spinning forever.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-1"
+          "msg-3"
         ],
         "quotes": [
-          "may be we have changed the name so please make it as used in v14 or lower"
+          "Vault Balances Refresh button ghumi ja rha balance show nahi ho rha"
         ]
       },
       "acceptanceCriteria": [
-        "No startup-time runtime errors are caused by missing/renamed name-derived identifiers.",
-        "The app successfully mounts (fires the existing `app-mounted` signal) and the boot fallback screen hides on a normal load.",
-        "Any build/version/identifier values shown in the UI remain present and do not prevent load when changed."
+        "When chainId != 56, Vault Balances does not poll/refresh and shows an English error message instructing the user to switch to BSC (no infinite spinner).",
+        "When clicking Refresh, the button spinner stops within a bounded time even if the RPC endpoint is slow/unresponsive, and an error alert is shown if the fetch fails/timeouts.",
+        "During auto-polling, overlapping fetches do not cause the UI to remain in a refreshing state; `isRefreshing` reliably returns to false after completion or failure.",
+        "If balance calls revert or return invalid data, the UI shows an error alert instead of silently showing no balances while continuing to spin."
       ]
     }
   ],
   "constraints": [
-    "Do not edit files under frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useInternetIdentity.tsx, frontend/src/hooks/useActor.ts, frontend/src/main.tsx, or anything under frontend/src/components/ui (compose existing UI components instead).",
-    "Keep backend as a single Motoko actor; only add backend changes if strictly necessary for the naming rollback."
+    "Do not edit files under frontend/src/components/ui or any other paths listed as immutable in SYSTEM_CONTEXT."
   ],
   "nonGoals": [
-    "Adding new product features beyond restoring Version 14 (or lower) naming consistency.",
-    "Introducing third-party authentication providers or external databases/services."
+    "Do not add support for additional chains beyond BSC Mainnet (56).",
+    "Do not add third-party wallet connection libraries (e.g., WalletConnect, wagmi).",
+    "No backend (Motoko) changes are required for this fix."
   ],
   "imageRequirements": {
     "required": [],
     "edits": []
-  },
-  "userProfileUpdate": {
-    "goalsToAdd": [],
-    "goalsToRemove": [],
-    "preferencesToAdd": [],
-    "preferencesToRemove": [],
-    "miscToAdd": [],
-    "miscToRemove": [],
-    "fieldsToSet": {},
-    "fieldsToDelete": []
   }
 }

@@ -1,35 +1,40 @@
+// Build information constants
+export const BUILD_VERSION = 'v23';
+export const BUILD_DATE = '2026-02-13';
+export const BUILD_IDENTIFIER = `v23-${BUILD_DATE}`;
+
 /**
- * Build information helper
- * Provides build identifier and version for deployment verification
+ * Get the build version string
  */
-
-export const BUILD_INFO = {
-  version: 'v14',
-  date: '2026-02-13',
-  identifier: 'rollback-v14-2026-02-13',
-} as const;
-
-export function getBuildIdentifier(): string {
-  return BUILD_INFO.identifier;
-}
-
 export function getBuildVersion(): string {
-  return BUILD_INFO.version;
-}
-
-export function getBuildDate(): string {
-  return BUILD_INFO.date;
+  return BUILD_VERSION;
 }
 
 /**
- * Get the deployed build ID from the meta tag, with fallback to static identifier
+ * Get the build date string
+ */
+export function getBuildDate(): string {
+  return BUILD_DATE;
+}
+
+/**
+ * Get the build identifier (version + date)
+ */
+export function getBuildIdentifier(): string {
+  return BUILD_IDENTIFIER;
+}
+
+/**
+ * Get the deployed build ID from the meta tag
+ * Falls back to the static identifier if meta tag is not found
  */
 export function getDeployedBuildId(): string {
-  if (typeof document !== 'undefined') {
-    const buildIdMeta = document.querySelector('meta[name="build-id"]');
-    if (buildIdMeta) {
-      return buildIdMeta.getAttribute('content') || BUILD_INFO.identifier;
+  const buildIdMeta = document.querySelector('meta[name="build-id"]');
+  if (buildIdMeta) {
+    const content = buildIdMeta.getAttribute('content');
+    if (content && content !== 'unknown') {
+      return content;
     }
   }
-  return BUILD_INFO.identifier;
+  return BUILD_IDENTIFIER;
 }

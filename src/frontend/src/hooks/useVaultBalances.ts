@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useWeb3 } from './useWeb3';
 import { VAULT_ADDRESS, decodeUint256 } from '@/lib/contracts';
 import { formatUnits } from '@/lib/evm';
@@ -7,6 +7,8 @@ import { decodeTokenSymbol } from '@/lib/evmAbiText';
 import { useTokenMetadataCache } from './useTokenMetadataCache';
 
 const POLL_INTERVAL = 10000; // 10 seconds
+const FETCH_TIMEOUT = 15000; // 15 seconds timeout for RPC calls
+const BSC_CHAIN_ID = 56;
 
 export interface TokenBalance {
   address: string;
@@ -16,8 +18,20 @@ export interface TokenBalance {
   decimals: number;
 }
 
+/**
+ * Wraps a promise with a timeout
+ */
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, errorMessage: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(errorMessage)), timeoutMs)
+    ),
+  ]);
+}
+
 export function useVaultBalances(enablePolling = true) {
-  const { callContract, isConnected } = useWeb3();
+  const { callContract, isConnected, chainId } = useWeb3();
   const { tokens: watchedTokens } = useWatchedTokens();
   const { get: getMetadata, set: setMetadata, cacheSize, clear: clearCache } = useTokenMetadataCache();
 
@@ -32,16 +46,23 @@ export function useVaultBalances(enablePolling = true) {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [liveUpdatesEnabled, setLiveUpdatesEnabled] = useState(true);
 
+  // In-flight guard to prevent overlapping fetches
+  const isFetchingRef = useRef(false);
+
+  // Check if on correct network
+  const isOnBSC = chainId === BSC_CHAIN_ID;
+
   const fetchBnbBalance = useCallback(async () => {
-    if (!isConnected) return;
+    if (!isConnected || !isOnBSC) return;
 
     try {
       setBnbError(null);
       setBnbFallbackUsed(false);
 
-      const balanceHex = await callContract(
-        VAULT_ADDRESS,
-        '0x12065fe0' // getBalance()
+      const balanceHex = await withTimeout(
+        callContract(VAULT_ADDRESS, '0x12065fe0'), // getBalance()
+        FETCH_TIMEOUT,
+        'Request timed out. Please check your network connection and try again.'
       );
 
       const balance = decodeUint256(balanceHex);
@@ -54,8 +75,9 @@ export function useVaultBalances(enablePolling = true) {
       setBnbError(err.message || 'Failed to fetch BNB balance');
       setBnbBalance('0');
       setBnbBalanceRaw(0n);
+      throw err; // Re-throw to be caught by fetchAllBalances
     }
-  }, [callContract, isConnected]);
+  }, [callContract, isConnected, isOnBSC]);
 
   const fetchTokenMetadata = useCallback(
     async (tokenAddress: string): Promise<{ symbol: string; decimals: number }> => {
@@ -66,12 +88,20 @@ export function useVaultBalances(enablePolling = true) {
       }
 
       try {
-        // Fetch symbol
-        const symbolData = await callContract(tokenAddress, '0x95d89b41');
+        // Fetch symbol with timeout
+        const symbolData = await withTimeout(
+          callContract(tokenAddress, '0x95d89b41'),
+          FETCH_TIMEOUT,
+          'Token metadata fetch timed out'
+        );
         const symbol = decodeTokenSymbol(symbolData, 'TOKEN');
 
-        // Fetch decimals
-        const decimalsData = await callContract(tokenAddress, '0x313ce567');
+        // Fetch decimals with timeout
+        const decimalsData = await withTimeout(
+          callContract(tokenAddress, '0x313ce567'),
+          FETCH_TIMEOUT,
+          'Token decimals fetch timed out'
+        );
         const decimals = parseInt(decimalsData, 16);
 
         const metadata = { symbol, decimals };
@@ -86,7 +116,7 @@ export function useVaultBalances(enablePolling = true) {
   );
 
   const fetchTokenBalances = useCallback(async () => {
-    if (!isConnected || watchedTokens.length === 0) {
+    if (!isConnected || !isOnBSC || watchedTokens.length === 0) {
       setTokenBalances([]);
       return;
     }
@@ -95,10 +125,14 @@ export function useVaultBalances(enablePolling = true) {
       const balances = await Promise.all(
         watchedTokens.map(async (tokenAddress) => {
           try {
-            // Fetch balance
-            const balanceData = await callContract(
-              tokenAddress,
-              '0x70a08231' + VAULT_ADDRESS.slice(2).padStart(64, '0') // balanceOf(address)
+            // Fetch balance with timeout
+            const balanceData = await withTimeout(
+              callContract(
+                tokenAddress,
+                '0x70a08231' + VAULT_ADDRESS.slice(2).padStart(64, '0') // balanceOf(address)
+              ),
+              FETCH_TIMEOUT,
+              'Token balance fetch timed out'
             );
             const balanceRaw = decodeUint256(balanceData);
 
@@ -121,19 +155,42 @@ export function useVaultBalances(enablePolling = true) {
         })
       );
 
-      setTokenBalances(balances.filter((b): b is TokenBalance => b !== null));
+      const validBalances = balances.filter((b): b is TokenBalance => b !== null);
+      setTokenBalances(validBalances);
+
+      // If some balances failed but not all, don't throw
+      if (validBalances.length === 0 && watchedTokens.length > 0) {
+        throw new Error('Failed to fetch any token balances');
+      }
     } catch (err: any) {
       console.error('Failed to fetch token balances:', err);
-      setError(err.message || 'Failed to fetch token balances');
+      throw err; // Re-throw to be caught by fetchAllBalances
     }
-  }, [callContract, isConnected, watchedTokens, fetchTokenMetadata]);
+  }, [callContract, isConnected, isOnBSC, watchedTokens, fetchTokenMetadata]);
 
   const fetchAllBalances = useCallback(
     async (isInitial = false) => {
-      if (!isConnected) {
-        setIsLoading(false);
+      // Prevent overlapping fetches
+      if (isFetchingRef.current) {
         return;
       }
+
+      // Check if on correct network
+      if (!isConnected) {
+        setIsLoading(false);
+        setIsRefreshing(false);
+        setError(null);
+        return;
+      }
+
+      if (!isOnBSC) {
+        setIsLoading(false);
+        setIsRefreshing(false);
+        setError('Please switch to Binance Smart Chain (BSC) network to view balances.');
+        return;
+      }
+
+      isFetchingRef.current = true;
 
       if (isInitial) {
         setIsLoading(true);
@@ -146,36 +203,56 @@ export function useVaultBalances(enablePolling = true) {
       try {
         await Promise.all([fetchBnbBalance(), fetchTokenBalances()]);
         setLastUpdated(new Date());
+        setError(null); // Clear any previous errors on success
       } catch (err: any) {
         console.error('Failed to fetch balances:', err);
-        setError(err.message || 'Failed to fetch balances');
+        const errorMessage = err.message || 'Failed to fetch balances. Please check your network connection and try again.';
+        setError(errorMessage);
       } finally {
+        isFetchingRef.current = false;
         setIsLoading(false);
         setIsRefreshing(false);
       }
     },
-    [isConnected, fetchBnbBalance, fetchTokenBalances]
+    [isConnected, isOnBSC, fetchBnbBalance, fetchTokenBalances]
   );
 
-  // Initial fetch - only when connected
+  // Initial fetch - only when connected and on BSC
   useEffect(() => {
-    if (isConnected) {
+    if (isConnected && isOnBSC) {
       fetchAllBalances(true);
     } else {
       setIsLoading(false);
+      setIsRefreshing(false);
+      isFetchingRef.current = false;
+      
+      if (isConnected && !isOnBSC) {
+        setError('Please switch to Binance Smart Chain (BSC) network to view balances.');
+      } else {
+        setError(null);
+      }
     }
-  }, [isConnected, fetchAllBalances]);
+  }, [isConnected, isOnBSC, fetchAllBalances]);
 
-  // Polling - only when enabled and connected
+  // Polling - only when enabled, connected, and on BSC
   useEffect(() => {
-    if (!liveUpdatesEnabled || !isConnected || !enablePolling) return;
+    if (!liveUpdatesEnabled || !isConnected || !isOnBSC || !enablePolling) return;
 
     const interval = setInterval(() => {
       fetchAllBalances(false);
     }, POLL_INTERVAL);
 
     return () => clearInterval(interval);
-  }, [liveUpdatesEnabled, isConnected, enablePolling, fetchAllBalances]);
+  }, [liveUpdatesEnabled, isConnected, isOnBSC, enablePolling, fetchAllBalances]);
+
+  // Reset states when disconnected or wrong network
+  useEffect(() => {
+    if (!isConnected || !isOnBSC) {
+      setIsRefreshing(false);
+      setIsLoading(false);
+      isFetchingRef.current = false;
+    }
+  }, [isConnected, isOnBSC]);
 
   const clearMetadataCache = useCallback(() => {
     clearCache();

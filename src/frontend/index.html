@@ -5,7 +5,7 @@
         <meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes' />
         <meta name='description' content='Digital Asset Vault - Secure management of your BEP20 tokens and BNB on Binance Smart Chain' />
         <meta name='theme-color' content='#000000' />
-        <meta name='build-id' content='rollback-v14-2026-02-13' />
+        <meta name='build-id' content='v23-2026-02-13' />
         <title>Digital Asset Vault</title>
         <style>
             /* Boot fallback styles - inline to avoid external dependencies */
@@ -175,8 +175,40 @@
                 display: block;
             }
         </style>
+    </head>
+    <body>
+        <div id='boot-fallback'>
+            <div class='boot-container'>
+                <div class='boot-icon'>🛡️</div>
+                <div id='boot-spinner' class='boot-spinner'></div>
+                <h1 id='boot-title' class='boot-title'>Loading Digital Asset Vault</h1>
+                <p id='boot-message' class='boot-message'>Initializing secure vault interface...</p>
+                <button id='boot-button' class='boot-button' style='display: none;'>
+                    Reload Application
+                </button>
+                <div id='boot-guidance' class='boot-guidance' style='display: none;'>
+                    <p><strong>Troubleshooting:</strong></p>
+                    <ul style='text-align: left; margin: 8px 0; padding-left: 20px;'>
+                        <li>Check your internet connection</li>
+                        <li>Clear browser cache and cookies</li>
+                        <li>Try a different browser</li>
+                        <li>Disable browser extensions temporarily</li>
+                        <li>If the issue persists, use "Copy diagnostics" after the app loads</li>
+                    </ul>
+                </div>
+                <div id='boot-technical' class='boot-technical' style='display: none;'>
+                    <button id='boot-technical-toggle' class='boot-technical-toggle'>
+                        Show Technical Details
+                    </button>
+                    <div id='boot-technical-content' class='boot-technical-content'></div>
+                </div>
+            </div>
+        </div>
+        <div id='root'></div>
+        <script type='module' src='/src/main.tsx'></script>
         <script>
             // Boot fallback system with performance measurement
+            // This script runs after DOM is ready since it's at the end of body
             (function() {
                 const BOOT_TIMEOUT = 20000; // 20 seconds
                 const STILL_LOADING_THRESHOLD = 3000; // 3 seconds
@@ -314,7 +346,7 @@
                         
                         showBootError('Application Error', sanitizedMessage, event.error, 'runtime-error');
                     }
-                });
+                }, true); // Use capture phase to catch errors early
 
                 window.addEventListener('unhandledrejection', (event) => {
                     if (!appMounted) {
@@ -343,19 +375,35 @@
                         errorCategory = '(c) Runtime Error';
                     }
 
-                    bootTitle.textContent = title;
-                    bootMessage.innerHTML = '<strong>' + errorCategory + '</strong><br>' + 
-                        message + 
-                        '<br><span class="boot-build-id">Build ID: ' + buildId + '</span>';
-                    
-                    if (!isOnline) {
-                        bootMessage.innerHTML += '<br><br><span style="color: #ff6b6b; font-weight: 600;">⚠️ You appear to be offline</span>';
+                    if (bootTitle) {
+                        bootTitle.textContent = title;
                     }
                     
-                    bootSpinner.style.display = 'none';
-                    bootButton.style.display = 'inline-block';
-                    bootGuidance.style.display = 'block';
-                    bootTechnical.style.display = error ? 'block' : 'none';
+                    if (bootMessage) {
+                        bootMessage.innerHTML = '<strong>' + errorCategory + '</strong><br>' + 
+                            message + 
+                            '<br><span class="boot-build-id">Build ID: ' + buildId + '</span>';
+                        
+                        if (!isOnline) {
+                            bootMessage.innerHTML += '<br><br><span style="color: #ff6b6b; font-weight: 600;">⚠️ You appear to be offline</span>';
+                        }
+                    }
+                    
+                    if (bootSpinner) {
+                        bootSpinner.style.display = 'none';
+                    }
+                    
+                    if (bootButton) {
+                        bootButton.style.display = 'inline-block';
+                    }
+                    
+                    if (bootGuidance) {
+                        bootGuidance.style.display = 'block';
+                    }
+                    
+                    if (bootTechnical) {
+                        bootTechnical.style.display = error ? 'block' : 'none';
+                    }
 
                     if (error && bootTechnicalContent) {
                         bootTechnicalContent.textContent = error.stack || error.toString();
@@ -380,36 +428,5 @@
                 }
             })();
         </script>
-    </head>
-    <body>
-        <div id='boot-fallback'>
-            <div class='boot-container'>
-                <div class='boot-icon'>🛡️</div>
-                <div id='boot-spinner' class='boot-spinner'></div>
-                <h1 id='boot-title' class='boot-title'>Loading Digital Asset Vault</h1>
-                <p id='boot-message' class='boot-message'>Initializing secure vault interface...</p>
-                <button id='boot-button' class='boot-button' style='display: none;'>
-                    Reload Application
-                </button>
-                <div id='boot-guidance' class='boot-guidance' style='display: none;'>
-                    <p><strong>Troubleshooting:</strong></p>
-                    <ul style='text-align: left; margin: 8px 0; padding-left: 20px;'>
-                        <li>Check your internet connection</li>
-                        <li>Clear browser cache and cookies</li>
-                        <li>Try a different browser</li>
-                        <li>Disable browser extensions temporarily</li>
-                        <li>If the issue persists, use "Copy diagnostics" after the app loads</li>
-                    </ul>
-                </div>
-                <div id='boot-technical' class='boot-technical' style='display: none;'>
-                    <button id='boot-technical-toggle' class='boot-technical-toggle'>
-                        Show Technical Details
-                    </button>
-                    <div id='boot-technical-content' class='boot-technical-content'></div>
-                </div>
-            </div>
-        </div>
-        <div id='root'></div>
-        <script type='module' src='/src/main.tsx'></script>
     </body>
 </html>

@@ -1,89 +1,38 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Restore Version 14 (or lower) app naming and stabilize name-derived identifiers",
+  "title": "Fix Dashboard wrong-network wallet UI visibility and stop Vault Balances infinite refresh spinner",
   "requirements": [
     {
-      "id": "REQ-1",
-      "summary": "Restore the visible app name/branding across the HTML shell, boot fallback UI, and in-app header/footer to match Version 14 (or lower) naming consistently in English.",
+      "id": "REQ-4",
+      "summary": "Show WalletConnect on Dashboard when disconnected or on the wrong network (chainId != 56) and hide balance/operations panels until on BSC.",
       "acceptanceCriteria": [
-        "Browser tab title matches the Version 14 (or lower) app name.",
-        "Boot fallback screen title text uses the Version 14 (or lower) app name consistently.",
-        "In-app header branding text uses the Version 14 (or lower) app name consistently (including responsive variants like short names).",
-        "In-app footer branding text uses the Version 14 (or lower) app name consistently.",
-        "All user-facing naming text is in English."
+        "If no wallet is connected, the Dashboard shows the WalletConnect card with a visible \"Connect Wallet\" button.",
+        "If a wallet is connected but chainId is not 56, the Dashboard shows the WalletConnect \"Wrong Network\" UI (including the \"Switch to BSC Network\" button) and does not show the balances/operations panels.",
+        "If a wallet is connected and chainId is 56, the WalletConnect UI is hidden and the balances/operations panels render as normal."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/lib/appBranding.ts",
-          "operation": "create",
-          "description": "Create a single source of truth for Version 14 (or lower) branding strings (e.g., full app name and responsive short name) to ensure consistent usage across UI surfaces."
-        },
-        {
-          "path": "frontend/index.html",
-          "operation": "modify",
-          "description": "Update the HTML document title and any relevant metadata/boot fallback title text to match the Version 14 (or lower) app name consistently, in English."
-        },
-        {
-          "path": "frontend/src/components/Header.tsx",
-          "operation": "modify",
-          "description": "Replace hardcoded header branding strings with values sourced from frontend/src/lib/appBranding.ts to ensure consistent full/short responsive naming."
-        },
-        {
-          "path": "frontend/src/components/Footer.tsx",
-          "operation": "modify",
-          "description": "Replace hardcoded footer branding strings with values sourced from frontend/src/lib/appBranding.ts so the footer displays the Version 14 (or lower) app name consistently."
-        },
-        {
           "path": "frontend/src/pages/Dashboard.tsx",
           "operation": "modify",
-          "description": "Replace the hardcoded hero/title branding text with values sourced from frontend/src/lib/appBranding.ts to keep in-app visible naming consistent."
-        },
-        {
-          "path": "frontend/public/health.html",
-          "operation": "modify",
-          "description": "Update the static health page title and visible heading/copy that references the app name to match the Version 14 (or lower) naming consistently in English."
-        },
-        {
-          "path": "frontend/src/components/DiagnosticsBar.tsx",
-          "operation": "modify",
-          "description": "Update the user-facing diagnostics header text to use the Version 14 (or lower) app name via frontend/src/lib/appBranding.ts so diagnostics copy is consistent with the restored branding."
+          "description": "Update the Dashboard conditional rendering so the existing WalletConnect component is rendered when (a) no account is connected OR (b) an account is connected but chainId !== 56, and gate the balances + vault operations UI to only render when chainId === 56. Add a clear, user-facing message (e.g., Alert) in the wrong-network state explaining that balances/operations are unavailable until switching to BSC."
         }
       ]
     },
     {
-      "id": "REQ-2",
-      "summary": "Audit and revert name-derived identifiers referenced at startup (build identifier strings and any hostname/app-identifier derivations used in links or diagnostics) to Version 14 (or lower) values to prevent load regressions.",
+      "id": "REQ-5",
+      "summary": "Make Vault Balances refresh/polling bounded and error-driven: skip on wrong network, enforce timeouts, and ensure isRefreshing cannot remain true indefinitely.",
       "acceptanceCriteria": [
-        "No startup-time runtime errors are caused by missing/renamed name-derived identifiers.",
-        "The app successfully mounts (fires the existing `app-mounted` signal) and the boot fallback screen hides on a normal load.",
-        "Any build/version/identifier values shown in the UI remain present and do not prevent load when changed."
+        "When chainId != 56, Vault Balances does not poll/refresh and shows an English error message instructing the user to switch to BSC (no infinite spinner).",
+        "When clicking Refresh, the button spinner stops within a bounded time even if the RPC endpoint is slow/unresponsive, and an error alert is shown if the fetch fails/timeouts.",
+        "During auto-polling, overlapping fetches do not cause the UI to remain in a refreshing state; `isRefreshing` reliably returns to false after completion or failure.",
+        "If balance calls revert or return invalid data, the UI shows an error alert instead of silently showing no balances while continuing to spin."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/lib/appBranding.ts",
+          "path": "frontend/src/hooks/useVaultBalances.ts",
           "operation": "modify",
-          "description": "Add/confirm any non-UI name-derived constants needed to avoid ad-hoc string construction at startup (e.g., a stable, Version 14 (or lower) identifier-safe label for diagnostics/attribution text)."
-        },
-        {
-          "path": "frontend/src/lib/buildInfo.ts",
-          "operation": "modify",
-          "description": "Audit build/version/identifier helpers to ensure they are resilient to missing/changed meta tags and do not throw at startup; keep build/version/identifier values present for UI display without affecting app mount."
-        },
-        {
-          "path": "frontend/index.html",
-          "operation": "modify",
-          "description": "Audit name-coupled startup references in the HTML shell (e.g., build-id meta usage and boot fallback script assumptions) and revert/align any identifier strings that must match Version 14 (or lower) values so the app mounts and the fallback hides on normal load."
-        },
-        {
-          "path": "frontend/src/components/Footer.tsx",
-          "operation": "modify",
-          "description": "Audit any hostname/app-identifier derivations used in outgoing links to ensure they are stable and not inadvertently coupled to the visible app name; keep attribution links functional after the naming rollback."
-        },
-        {
-          "path": "frontend/src/components/DiagnosticsBar.tsx",
-          "operation": "modify",
-          "description": "Ensure diagnostics text composition remains robust (no assumptions about renamed identifiers) while preserving build/version/identifier visibility; align any name-derived labels with frontend/src/lib/appBranding.ts."
+          "description": "Add chain gating using chainId from useWeb3 so balance fetching is skipped (and polling disabled) when chainId !== 56, setting a clear English error message and ensuring isLoading/isRefreshing are reset. Add a timeout wrapper around contract/RPC calls so stalled requests resolve into an error state within a bounded time and always release the in-flight/refresh flags in finally blocks. Improve token-balance fetching to surface per-token or aggregate errors (reverts/invalid data) into the hook's error state so the UI shows an error alert instead of silently dropping balances while appearing to refresh."
         }
       ]
     }

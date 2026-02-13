@@ -1,27 +1,35 @@
 import { ThemeProvider } from 'next-themes';
 import { Toaster } from '@/components/ui/sonner';
-import { Web3Provider } from './hooks/useWeb3';
-import { Dashboard } from './pages/Dashboard';
-import ErrorBoundary from './components/ErrorBoundary';
-import { useEffect } from 'react';
+import { Web3Provider } from '@/hooks/useWeb3';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { Dashboard } from '@/pages/Dashboard';
+import { useEffect, useRef } from 'react';
 
-export default function App() {
+function App() {
+  const mountedRef = useRef(false);
+
   useEffect(() => {
-    // Signal that React has mounted successfully
-    window.dispatchEvent(new CustomEvent('app-mounted'));
-    
-    // Set a flag for programmatic checks
-    (window as any).__APP_MOUNTED__ = true;
+    // Dispatch app-mounted event only once
+    if (!mountedRef.current) {
+      mountedRef.current = true;
+      
+      // Small delay to ensure DOM is fully rendered
+      requestAnimationFrame(() => {
+        window.dispatchEvent(new Event('app-mounted'));
+      });
+    }
   }, []);
 
   return (
-    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
-      <Web3Provider>
-        <ErrorBoundary>
+    <ErrorBoundary>
+      <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+        <Web3Provider>
           <Dashboard />
           <Toaster />
-        </ErrorBoundary>
-      </Web3Provider>
-    </ThemeProvider>
+        </Web3Provider>
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 }
+
+export default App;

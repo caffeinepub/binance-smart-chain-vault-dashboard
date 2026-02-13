@@ -4,30 +4,30 @@
 
 @layer base {
   :root {
-    /* Professional blue/teal color palette */
-    --background: oklch(98% 0.01 240);
-    --foreground: oklch(15% 0.02 240);
+    /* Professional orange-on-white color palette */
+    --background: oklch(100% 0 0);
+    --foreground: oklch(15% 0.02 30);
 
     --card: oklch(100% 0 0);
-    --card-foreground: oklch(15% 0.02 240);
+    --card-foreground: oklch(15% 0.02 30);
 
     --popover: oklch(100% 0 0);
-    --popover-foreground: oklch(15% 0.02 240);
+    --popover-foreground: oklch(15% 0.02 30);
 
-    /* Primary: Professional blue */
-    --primary: oklch(60% 0.18 230);
+    /* Primary: Vibrant orange */
+    --primary: oklch(65% 0.20 40);
     --primary-foreground: oklch(100% 0 0);
 
     /* Secondary: Neutral gray */
-    --secondary: oklch(92% 0.01 240);
-    --secondary-foreground: oklch(20% 0.02 240);
+    --secondary: oklch(92% 0.01 30);
+    --secondary-foreground: oklch(20% 0.02 30);
 
     /* Muted: Light gray */
-    --muted: oklch(94% 0.01 240);
-    --muted-foreground: oklch(45% 0.02 240);
+    --muted: oklch(94% 0.01 30);
+    --muted-foreground: oklch(45% 0.02 30);
 
-    /* Accent: Teal */
-    --accent: oklch(65% 0.15 200);
+    /* Accent: Warm amber */
+    --accent: oklch(70% 0.15 60);
     --accent-foreground: oklch(100% 0 0);
 
     /* Destructive: Red */
@@ -35,16 +35,16 @@
     --destructive-foreground: oklch(100% 0 0);
 
     /* Border and input */
-    --border: oklch(88% 0.01 240);
-    --input: oklch(88% 0.01 240);
-    --ring: oklch(60% 0.18 230);
+    --border: oklch(88% 0.01 30);
+    --input: oklch(88% 0.01 30);
+    --ring: oklch(65% 0.20 40);
 
-    /* Chart colors - professional blue/teal palette */
-    --chart-1: oklch(65% 0.15 200);
-    --chart-2: oklch(70% 0.12 180);
-    --chart-3: oklch(55% 0.20 250);
-    --chart-4: oklch(75% 0.10 160);
-    --chart-5: oklch(50% 0.22 270);
+    /* Chart colors - warm orange/amber palette */
+    --chart-1: oklch(65% 0.20 40);
+    --chart-2: oklch(70% 0.15 60);
+    --chart-3: oklch(60% 0.18 30);
+    --chart-4: oklch(75% 0.12 50);
+    --chart-5: oklch(55% 0.22 20);
 
     /* Radius */
     --radius: 0.5rem;
@@ -57,47 +57,47 @@
   }
 
   .dark {
-    /* Dark mode: Deep blue background with bright accents */
-    --background: oklch(15% 0.03 240);
-    --foreground: oklch(95% 0.01 240);
+    /* Dark mode: Deep background with bright orange accents */
+    --background: oklch(15% 0.02 30);
+    --foreground: oklch(95% 0.01 30);
 
-    --card: oklch(18% 0.03 240);
-    --card-foreground: oklch(95% 0.01 240);
+    --card: oklch(18% 0.02 30);
+    --card-foreground: oklch(95% 0.01 30);
 
-    --popover: oklch(18% 0.03 240);
-    --popover-foreground: oklch(95% 0.01 240);
+    --popover: oklch(18% 0.02 30);
+    --popover-foreground: oklch(95% 0.01 30);
 
-    /* Primary: Bright cyan/blue */
-    --primary: oklch(70% 0.18 210);
-    --primary-foreground: oklch(10% 0.02 240);
+    /* Primary: Bright orange */
+    --primary: oklch(70% 0.20 40);
+    --primary-foreground: oklch(10% 0.02 30);
 
     /* Secondary: Dark gray */
-    --secondary: oklch(25% 0.02 240);
-    --secondary-foreground: oklch(90% 0.01 240);
+    --secondary: oklch(25% 0.02 30);
+    --secondary-foreground: oklch(90% 0.01 30);
 
     /* Muted: Medium gray */
-    --muted: oklch(25% 0.02 240);
-    --muted-foreground: oklch(65% 0.02 240);
+    --muted: oklch(25% 0.02 30);
+    --muted-foreground: oklch(65% 0.02 30);
 
-    /* Accent: Bright teal */
-    --accent: oklch(75% 0.15 190);
-    --accent-foreground: oklch(10% 0.02 240);
+    /* Accent: Warm amber */
+    --accent: oklch(75% 0.15 60);
+    --accent-foreground: oklch(10% 0.02 30);
 
     /* Destructive: Bright red */
     --destructive: oklch(60% 0.22 25);
     --destructive-foreground: oklch(100% 0 0);
 
     /* Border and input */
-    --border: oklch(30% 0.02 240);
-    --input: oklch(30% 0.02 240);
-    --ring: oklch(70% 0.18 210);
+    --border: oklch(30% 0.02 30);
+    --input: oklch(30% 0.02 30);
+    --ring: oklch(70% 0.20 40);
 
-    /* Chart colors - bright professional palette for dark mode */
-    --chart-1: oklch(75% 0.15 190);
-    --chart-2: oklch(70% 0.12 170);
-    --chart-3: oklch(65% 0.20 240);
-    --chart-4: oklch(80% 0.10 150);
-    --chart-5: oklch(60% 0.22 260);
+    /* Chart colors - warm palette for dark mode */
+    --chart-1: oklch(70% 0.20 40);
+    --chart-2: oklch(75% 0.15 60);
+    --chart-3: oklch(65% 0.18 30);
+    --chart-4: oklch(80% 0.12 50);
+    --chart-5: oklch(60% 0.22 20);
 
     /* Success and warning */
     --success: oklch(70% 0.18 145);
@@ -113,28 +113,5 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-feature-settings: "rlig" 1, "calt" 1;
-  }
-}
-
-/* Touch target optimization for mobile */
-@layer utilities {
-  .touch-target {
-    min-height: 44px;
-    min-width: 44px;
-  }
-}
-
-/* Focus visible styles for accessibility */
-@layer base {
-  *:focus-visible {
-    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
-  }
-}
-
-/* Smooth scrolling */
-@layer base {
-  html {
-    scroll-behavior: smooth;
   }
 }

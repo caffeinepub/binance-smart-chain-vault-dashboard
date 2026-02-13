@@ -4,29 +4,30 @@
   "summary": "New project",
   "architectural_notes": [],
   "known_issues": [
-    "Regression: latest deployed version not opening/working for user; suspected cause is app/project name/package identifier changed vs V14 or earlier."
+    "Vault Balances: Refresh button keeps spinning and balances do not display.",
+    "UI: 'Connect wallet' button is not showing."
   ],
   "isFixRequest": true,
   "existing_features": [
     {
-      "id": "feature-restore-the-app-s-visible-name-branding-everywhere-it-appears-so-it-matches-the-naming-used-in-version-14-or-lower-and-ensure-the-name-is-consistent-across-the-app-shell-and-ui-this-includes-at-minimum-the-html-document-title-and-metadata-the-boot-fallback-screen-title-text-and-the-in-app-header-footer-branding",
-      "title": "Restore the app’s visible name/branding everywhere it appears so it matches the naming used in Version 14 (or lower), and ensure the name is consistent across the app shell and UI. This includes at minimum the HTML document title and metadata, the boot fallback screen title text, and the in-app header/footer branding.",
+      "id": "feature-ensure-the-wallet-connection-ui-is-always-visible-when-the-user-is-not-connected-or-when-the-wallet-is-connected-to-the-wrong-network-not-bsc-mainnet-chainid-56-specifically-on-the-dashboard-render-the-existing-walletconnect-component-when-a-no-account-is-connected-or-b-an-account-is-connected-but-chainid-56-and-hide-disable-balance-vault-operation-panels-until-the-user-is-on-bsc",
+      "title": "Ensure the wallet connection UI is always visible when the user is not connected OR when the wallet is connected to the wrong network (not BSC Mainnet, chainId 56). Specifically: on the Dashboard, render the existing WalletConnect component when (a) no account is connected or (b) an account is connected but chainId != 56, and hide/disable balance + vault operation panels until the user is on BSC.",
       "reqIds": [
-        "REQ-1"
+        "REQ-4"
       ],
       "version": 1
     },
     {
-      "id": "feature-audit-and-revert-any-name-derived-identifiers-that-can-break-loading-when-renamed-e-g-build-identifier-strings-hostname-app-identifier-derivations-used-in-links-or-other-name-coupled-values-referenced-at-startup-restoring-them-to-the-version-14-or-lower-values-so-the-deployed-app-loads-successfully",
-      "title": "Audit and revert any name-derived identifiers that can break loading when renamed (e.g., build identifier strings, hostname/app identifier derivations used in links, or other name-coupled values referenced at startup), restoring them to the Version 14 (or lower) values so the deployed app loads successfully.",
+      "id": "feature-prevent-vault-balances-from-getting-stuck-in-a-perpetual-refreshing-loading-state-and-ensure-balances-either-display-or-show-a-clear-error-update-the-balance-fetching-logic-so-that-1-balance-fetching-is-skipped-with-a-clear-user-facing-error-message-when-the-wallet-is-not-on-bsc-chainid-56-2-refresh-polling-cannot-leave-isrefreshing-true-indefinitely-and-3-any-stalled-rpc-fetches-time-out-and-resolve-into-an-error-state-instead-of-spinning-forever",
+      "title": "Prevent Vault Balances from getting stuck in a perpetual refreshing/loading state and ensure balances either display or show a clear error. Update the balance fetching logic so that: (1) balance fetching is skipped with a clear, user-facing error message when the wallet is not on BSC (chainId != 56), (2) refresh/polling cannot leave `isRefreshing` true indefinitely, and (3) any stalled RPC fetches time out and resolve into an error state instead of spinning forever.",
       "reqIds": [
-        "REQ-2"
+        "REQ-5"
       ],
       "version": 1
     }
   ],
   "new_feature_requests": [],
-  "projectName": "Restore app name/identifier to match Version 14 (or lower) naming",
+  "projectName": "Fix stuck Vault Balances refresh spinner and ensure Connect Wallet UI shows (wrong-network handling)",
   "clarification_mode": "instant",
   "clarification_rounds": 0
 }

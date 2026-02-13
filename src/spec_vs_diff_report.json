@@ -1,56 +1,48 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-02-13T20:49:39.945Z",
-  "summary": "The diff introduces a centralized branding constant (APP_BRANDING) and updates Header/Footer/Dashboard/DiagnosticsBar to use it, but the evidence provided does not show updates to the HTML document title/metadata or the boot fallback screen text, nor does it demonstrate the startup identifier rollback/mount behavior required by REQ-2.",
+  "generatedAt": "2026-02-13T21:35:33.065Z",
+  "summary": "REQ-4 appears implemented in Dashboard by rendering WalletConnect when disconnected or on wrong network and gating balances/operations behind BSC chainId 56. REQ-5 appears largely implemented in useVaultBalances via BSC gating, RPC timeouts, and an in-flight guard to prevent overlapping fetches; however, due to truncation, the exact guarantees around polling being skipped on wrong network and `isRefreshing` always resetting cannot be fully verified from the provided diff excerpt.",
   "missing_requirements": [
     {
-      "id": "REQ-1",
-      "requirement": "Restore the app’s visible name/branding everywhere it appears so it matches Version 14 (or lower), including at minimum the HTML document title and metadata and the boot fallback screen title text.",
-      "reason": "The diff summary shows branding updates in in-app components (Header/Footer/Dashboard/DiagnosticsBar) and a new appBranding constants file, but does not show any change to frontend/index.html (title/meta) or any boot fallback screen markup/text.",
+      "id": "REQ-5",
+      "requirement": "Ensure Vault Balances polling/refreshing is skipped when chainId != 56 and shows a clear user-facing error message; ensure `isRefreshing` reliably resets to false after completion/failure (including timeouts/reverts) and stalled RPC calls time out into an error state.",
+      "reason": "The diff excerpt shows timeouts (`withTimeout`), network gating (`isOnBSC`), and an in-flight guard, but the critical logic for (a) disabling polling when off-BSC, (b) setting a user-facing error state when off-BSC, and (c) resetting `isRefreshing` in `finally` blocks is referenced only in the truncated portion / external file summary, not directly visible in the included code snippet.",
       "evidence": [
-        "frontend/src/lib/appBranding.ts",
-        "frontend/src/components/Header.tsx",
-        "frontend/src/components/Footer.tsx",
-        "frontend/src/pages/Dashboard.tsx",
-        "frontend-file-summaries.txt (mentions frontend/index.html but is truncated and no actual index.html diff is shown)"
-      ]
-    },
-    {
-      "id": "REQ-2",
-      "requirement": "Audit and revert any name-derived identifiers that can break loading when renamed (startup-referenced build identifier strings, hostname/app identifier derivations used in links, or other name-coupled values referenced at startup) and ensure the app mounts and the boot fallback hides normally.",
-      "reason": "While an identifier constant is added (APP_BRANDING.identifier) and the footer uses hostname/identifier for a UTM parameter, the diff does not show changes to startup wiring, mount signaling (`app-mounted`), boot fallback hide logic, or any specific reverted startup-time identifier strings that could have caused loading failures.",
-      "evidence": [
-        "frontend/src/lib/appBranding.ts (adds identifier but does not show startup usage)",
-        "frontend/src/components/Footer.tsx (derives a tracking parameter from hostname/identifier)",
-        "frontend-file-summaries.txt (references frontend/src/main.tsx and frontend/index.html, but no corresponding diffs are shown)"
+        "frontend/src/hooks/useVaultBalances.ts (truncated)",
+        "frontend-file-summaries.txt (mentions behavior but not authoritative implementation)"
       ]
     }
   ],
   "hallucinated_features": [
     {
-      "description": "Added/changed outbound referral tracking URL construction using caffeine.ai with UTM parameters derived from hostname/app identifier.",
-      "reason": "The BuildRequest focuses on restoring naming consistency and preventing startup load breakage; adding or modifying referral/UTM tracking is not requested.",
+      "description": "Added token metadata caching controls and cache size/clear plumbing exposed to Dashboard/BalanceView.",
+      "reason": "REQ-4 and REQ-5 focus on WalletConnect visibility/wrong-network gating and preventing infinite refresh spinners via timeouts and state handling; metadata caching features are not requested by the BuildRequest.",
       "evidence": [
-        "frontend/src/components/Footer.tsx"
+        "frontend/src/hooks/useVaultBalances.ts (imports/uses useTokenMetadataCache; truncated)",
+        "frontend/src/pages/Dashboard.tsx (props: clearMetadataCache, metadataCacheSize)"
       ]
     },
     {
-      "description": "Introduced new branding fields beyond the app name itself (tagline, emoji icon) as part of APP_BRANDING.",
-      "reason": "REQ-1 requests restoring the app’s visible name/branding to match Version 14 naming; the diff adds additional branding elements (tagline/icon) that are not explicitly requested in the requirements.",
+      "description": "Added/expanded 'live updates' enable/disable state surfaced to BalanceView.",
+      "reason": "Not part of REQ-4/REQ-5 acceptance criteria; the request only concerns preventing stuck refresh/polling behavior and correct wallet connect visibility on wrong network.",
       "evidence": [
-        "frontend/src/lib/appBranding.ts",
-        "frontend/src/components/Header.tsx (renders APP_BRANDING.tagline)"
+        "frontend/src/hooks/useVaultBalances.ts (state: liveUpdatesEnabled, setLiveUpdatesEnabled)",
+        "frontend/src/pages/Dashboard.tsx (passes liveUpdatesEnabled/onToggleLiveUpdates)"
+      ]
+    },
+    {
+      "description": "Added an extra Dashboard alert message under WalletConnect advising users to switch to BSC to view balances/perform operations.",
+      "reason": "While consistent with the intent, this specific additional alert UI is not explicitly required (WalletConnect already has 'Wrong Network' UI per spec).",
+      "evidence": [
+        "frontend/src/pages/Dashboard.tsx (Alert shown when isConnected && !isOnBSC)"
       ]
     }
   ],
-  "confidence": 0.64,
+  "confidence": 0.62,
   "changed_files": [
     "frontend-file-summaries.txt",
-    "frontend/src/components/DiagnosticsBar.tsx",
-    "frontend/src/components/Footer.tsx",
-    "frontend/src/components/Header.tsx",
-    "frontend/src/lib/appBranding.ts",
+    "frontend/src/hooks/useVaultBalances.ts",
     "frontend/src/pages/Dashboard.tsx",
     "project_state.json"
   ]

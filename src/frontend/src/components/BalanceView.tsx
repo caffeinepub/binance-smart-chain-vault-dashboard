@@ -50,21 +50,21 @@ export function BalanceView({
   onClearMetadataCache,
   metadataCacheSize = 0,
 }: BalanceViewProps) {
-  const [isRefreshing_local, setIsRefreshing_local] = useState(false);
+  const [isRefreshingLocal, setIsRefreshingLocal] = useState(false);
   const { bnbValuation, tokenValuations, isLoading: isLoadingPrices } = useBalanceValuations(
     bnbBalanceRaw,
     tokenBalances.map(t => ({ address: t.address, balanceRaw: t.balanceRaw, decimals: t.decimals }))
   );
 
   const handleRefresh = async () => {
-    setIsRefreshing_local(true);
+    setIsRefreshingLocal(true);
     try {
       await onRefresh();
       toast.success('Balances refreshed successfully');
     } catch (err: any) {
       toast.error(err.message || 'Failed to refresh balances');
     } finally {
-      setIsRefreshing_local(false);
+      setIsRefreshingLocal(false);
     }
   };
 
@@ -94,6 +94,9 @@ export function BalanceView({
     const hours = Math.floor(minutes / 60);
     return `${hours}h ago`;
   };
+
+  // Show spinner only when actually refreshing (not during local button state)
+  const showSpinner = isRefreshing && !isRefreshingLocal;
 
   if (isLoading) {
     return (
@@ -125,7 +128,7 @@ export function BalanceView({
             </CardTitle>
             <CardDescription className="flex items-center gap-2 mt-1">
               Last updated: {formatLastUpdated(lastUpdated)}
-              {isRefreshing && (
+              {showSpinner && (
                 <RefreshCw className="h-3 w-3 animate-spin text-primary" />
               )}
             </CardDescription>
@@ -153,10 +156,10 @@ export function BalanceView({
               variant="outline"
               size="sm"
               onClick={handleRefresh}
-              disabled={isRefreshing_local || isRefreshing}
+              disabled={isRefreshingLocal}
               className="gap-2"
             >
-              <RefreshCw className={`h-4 w-4 ${(isRefreshing_local || isRefreshing) ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`h-4 w-4 ${isRefreshingLocal ? 'animate-spin' : ''}`} />
               Refresh
             </Button>
           </div>

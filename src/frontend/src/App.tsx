@@ -2,6 +2,7 @@ import { ThemeProvider } from 'next-themes';
 import { Toaster } from '@/components/ui/sonner';
 import { Web3Provider } from '@/hooks/useWeb3';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { Header } from '@/components/Header';
 import { Dashboard } from '@/pages/Dashboard';
 import { useEffect, useRef } from 'react';
 
@@ -24,6 +25,7 @@ function App() {
     <ErrorBoundary>
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
         <Web3Provider>
+          <Header />
           <Dashboard />
           <Toaster />
         </Web3Provider>

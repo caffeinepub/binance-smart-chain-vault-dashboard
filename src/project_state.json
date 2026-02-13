@@ -1,41 +1,53 @@
 {
   "schemaVersion": "1.0.0",
   "projectStateVersion": 3,
-  "summary": "New project",
+  "summary": "App with wallet connect and vault vault-balance UI, including live data fetch from BscScan.",
   "architectural_notes": [],
   "known_issues": [
-    "Wallet connection issue still persists after deployment (Version 25).",
-    "Vault balance does not refresh correctly after wallet connect / update (issue persists after deployment)."
+    "Live data fetch from BscScan is not working correctly, causing repeated refresh and Wallet Connect not showing."
   ],
   "isFixRequest": true,
   "existing_features": [
     {
-      "id": "feature-ensure-the-wallet-connection-ui-is-reliably-shown-on-the-dashboard-whenever-the-user-is-not-connected-web3-is-still-initializing-or-the-connected-wallet-is-on-a-non-bsc-network-chainid-56-this-must-prevent-states-where-the-user-cannot-see-a-visible-connect-wallet-wrong-network-prompt-due-to-initialization-timing-or-stale-web3-state",
-      "title": "Ensure the wallet connection UI is reliably shown on the Dashboard whenever the user is not connected, Web3 is still initializing, or the connected wallet is on a non-BSC network (chainId != 56). This must prevent states where the user cannot see a visible \"Connect Wallet\" / \"Wrong Network\" prompt due to initialization timing or stale Web3 state.",
+      "id": "feature-fix-the-live-vault-balance-data-fetch-polling-so-it-does-not-trigger-repeated-refresh-loops-and-does-not-prevent-the-wallet-connect-ui-from-being-shown-when-needed",
+      "title": "Fix the live vault balance data-fetch/polling so it does not trigger repeated refresh loops and does not prevent the Wallet Connect UI from being shown when needed.",
       "reqIds": [
         "REQ-1"
       ],
       "version": 1
     },
     {
-      "id": "feature-fix-vault-balance-refresh-so-that-it-always-completes-success-or-error-and-reliably-updates-balances-after-wallet-connect-account-change-chain-change-and-manual-refresh-clicks-manual-refresh-must-not-no-op-due-to-an-in-flight-polling-fetch-it-should-either-a-await-the-in-flight-fetch-and-then-run-a-new-fetch-or-b-coalesce-into-a-single-fetch-that-updates-state-and-resolves-the-refresh-call",
-      "title": "Fix vault balance refresh so that it always completes (success or error) and reliably updates balances after wallet connect, account change, chain change, and manual refresh clicks. Manual refresh must not no-op due to an in-flight polling fetch; it should either (a) await the in-flight fetch and then run a new fetch, or (b) coalesce into a single fetch that updates state and resolves the refresh call.",
+      "id": "feature-move-the-wallet-connect-entry-point-to-the-top-of-the-screen-so-users-can-always-see-a-wallet-connect-button-in-the-top-area-above-the-hero-content-regardless-of-balance-refresh-behavior",
+      "title": "Move the Wallet Connect entry point to the top of the screen so users can always see a Wallet Connect button in the top area (above the hero/content), regardless of balance refresh behavior.",
       "reqIds": [
         "REQ-2"
       ],
       "version": 1
     },
     {
-      "id": "feature-improve-web3-provider-event-handling-to-keep-account-chainid-state-in-sync-with-the-wallet-provider-and-reduce-stale-states-that-can-hide-the-connect-ui-or-block-refresh-flows-include-handling-for-relevant-eip-1193-events-at-minimum-accountschanged-chainchanged-connect-disconnect-and-ensure-state-is-reset-updated-consistently-on-each-event",
-      "title": "Improve Web3 provider event handling to keep account/chainId state in sync with the wallet provider and reduce stale states that can hide the connect UI or block refresh flows. Include handling for relevant EIP-1193 events (at minimum: accountsChanged, chainChanged, connect, disconnect) and ensure state is reset/updated consistently on each event.",
+      "id": "feature-update-the-vault-balances-display-to-be-explicitly-token-wise-show-a-clear-list-table-where-each-row-is-a-token-label-bnb-plus-other-tokens-with-its-balance",
+      "title": "Update the vault balances display to be explicitly token-wise: show a clear list/table where each row is a token label (BNB plus other tokens) with its balance.",
       "reqIds": [
         "REQ-3"
       ],
       "version": 1
     }
   ],
-  "new_feature_requests": [],
-  "projectName": "Fix wallet connect visibility and vault balance refresh after connect",
+  "new_feature_requests": [
+    {
+      "id": "AR-1",
+      "summary": "Move Wallet Connect button to the top of the screen.",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-2",
+      "summary": "Show vault balance token-wise (e.g., BNB and other tokens labeled).",
+      "reqIds": [],
+      "status": "pending"
+    }
+  ],
+  "projectName": "Stabilize live balance fetching, move Wallet Connect to top, and show token-wise vault balances",
   "clarification_mode": "instant",
   "clarification_rounds": 0
 }

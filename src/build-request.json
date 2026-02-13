@@ -1,75 +1,72 @@
 {
   "kind": "build_request",
-  "title": "Fix wallet connect visibility and vault balance refresh after connect",
-  "priority": "high",
+  "title": "Stabilize live balance fetching, move Wallet Connect to top, and show token-wise vault balances",
+  "priority": "normal",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "Ensure the wallet connection UI is reliably shown on the Dashboard whenever the user is not connected, Web3 is still initializing, or the connected wallet is on a non-BSC network (chainId != 56). This must prevent states where the user cannot see a visible \"Connect Wallet\" / \"Wrong Network\" prompt due to initialization timing or stale Web3 state.",
+      "text": "Fix the live vault balance data-fetch/polling so it does not trigger repeated refresh loops and does not prevent the Wallet Connect UI from being shown when needed.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-6"
+          "recent-messages"
         ],
         "quotes": [
-          "Connect wallet and vault balance refresh issue still exist"
+          "I think you have added live data fatch from bsc scan vo theek se kaam nahi kar rha hia isliye baar baar refresh ho rha isi liye wallet connect bhi show nahi ho rhai"
         ]
       },
       "acceptanceCriteria": [
-        "With MetaMask installed and no account connected, the Dashboard renders the WalletConnect UI with a \"Connect Wallet\" button.",
-        "While Web3 is initializing (e.g., initial page load before eth_accounts/eth_chainId resolve), the Dashboard shows the WalletConnect area (or a clear loading state in the same area) rather than hiding it.",
-        "When an account is connected but chainId != 56, the Dashboard renders the WalletConnect UI in \"Wrong Network\" mode and does not render the balances/operations panels.",
-        "When the user switches back to chainId 56, the balances/operations panels become available without requiring a hard refresh."
+        "With live updates enabled, the UI does not continually re-render/refresh the page in a loop.",
+        "Polling/refreshing balances does not cause the Wallet Connect UI to disappear when the user is not connected or is on the wrong network.",
+        "If balance fetch fails (timeouts/RPC errors), the app shows an error state but remains usable (no refresh loop), and the user can manually retry refresh.",
+        "Manual refresh and polling are coalesced so multiple overlapping fetches do not cascade into repeated state resets."
       ]
     },
     {
       "id": "REQ-2",
-      "text": "Fix vault balance refresh so that it always completes (success or error) and reliably updates balances after wallet connect, account change, chain change, and manual refresh clicks. Manual refresh must not no-op due to an in-flight polling fetch; it should either (a) await the in-flight fetch and then run a new fetch, or (b) coalesce into a single fetch that updates state and resolves the refresh call.",
+      "text": "Move the Wallet Connect entry point to the top of the screen so users can always see a Wallet Connect button in the top area (above the hero/content), regardless of balance refresh behavior.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-6"
+          "recent-messages"
         ],
         "quotes": [
-          "Connect wallet and vault balance refresh issue still exist"
+          "aisa karo wallet connect button top per rakho"
         ]
       },
       "acceptanceCriteria": [
-        "After clicking \"Connect Wallet\" (on BSC chainId 56), Vault Balances load and display without requiring a page reload.",
-        "Clicking the \"Refresh\" button in BalanceView always results in either (a) updated balances and \"Last updated\" time changing, or (b) a clear error message—never an indefinite spinner.",
-        "If polling is enabled and a poll fetch is currently in progress, clicking manual Refresh still results in a completed refresh sequence (it must not return immediately without updating).",
-        "When accounts are changed in the wallet, balances refresh for the new context and the UI does not get stuck in loading/refreshing state.",
-        "When chain is changed away from BSC and back to BSC, balances recover and can be refreshed successfully."
+        "A Wallet Connect button is visible at the top of the Dashboard layout when the user is not connected (and/or is initializing / wrong network).",
+        "The Wallet Connect UI remains accessible without requiring the user to scroll.",
+        "When connected, the top area no longer shows a primary “Connect Wallet” call-to-action (it may show connection status instead)."
       ]
     },
     {
       "id": "REQ-3",
-      "text": "Improve Web3 provider event handling to keep account/chainId state in sync with the wallet provider and reduce stale states that can hide the connect UI or block refresh flows. Include handling for relevant EIP-1193 events (at minimum: accountsChanged, chainChanged, connect, disconnect) and ensure state is reset/updated consistently on each event.",
+      "text": "Update the vault balances display to be explicitly token-wise: show a clear list/table where each row is a token label (BNB plus other tokens) with its balance.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-6"
+          "recent-messages"
         ],
         "quotes": [
-          "Connect wallet and vault balance refresh issue still exist"
+          "uske baad vault balance token wise jisme bnb, and other token likha ho"
         ]
       },
       "acceptanceCriteria": [
-        "If the wallet disconnects or the user removes all accounts, the app returns to the WalletConnect screen (\"Connect Wallet\" visible).",
-        "If the wallet reconnects (provider emits connect) the app updates chainId and shows the correct WalletConnect mode (connected-on-wrong-network vs ready).",
-        "No console errors are thrown due to event listener cleanup or missing handlers when navigating/reloading the app."
+        "The balances UI clearly presents BNB as a token row and displays other tokens as separate rows with their token labels (symbol) and balances.",
+        "If there are no tokens to display beyond BNB, the UI communicates that clearly (without hiding the token-wise structure).",
+        "Token rows remain readable during refresh (no flicker that looks like page refresh)."
       ]
     }
   ],
   "constraints": [
-    "Do not edit files under frontend/src/components/ui (compose them only).",
-    "Do not modify immutable hook files: frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useInternetIdentity.tsx, frontend/src/hooks/useActor.ts, frontend/src/main.tsx.",
-    "Backend must remain single-actor; no new backend services or external databases."
+    "Do not edit files under frontend/src/components/ui (read-only UI components); compose them instead.",
+    "Do not modify any files listed as immutable in SYSTEM_CONTEXT."
   ],
   "nonGoals": [
-    "Adding new authentication methods (only existing wallet connection behavior should be fixed).",
-    "Adding new vault features (deposits/withdrawals logic changes) beyond what is necessary to fix connect/refresh reliability.",
-    "Adding real-time features (WebSockets/push)."
+    "Implementing third-party authentication or non-Internet-Identity auth.",
+    "Adding a new backend database or external database integration.",
+    "Adding real-time WebSocket-based updates."
   ],
   "imageRequirements": {
     "required": [],

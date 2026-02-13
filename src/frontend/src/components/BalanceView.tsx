@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { RefreshCw, Plus, Coins, X, AlertCircle, TrendingUp, Pause, Play, Database } from 'lucide-react';
+import { RefreshCw, AlertCircle, Pause, Play, Database, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
+import { VaultBalancesTable } from '@/components/VaultBalancesTable';
 import { useBalanceValuations } from '@/hooks/useBalanceValuations';
 import { toast } from 'sonner';
 
@@ -38,7 +38,6 @@ export function BalanceView({
   bnbBalance,
   bnbBalanceRaw,
   bnbError,
-  bnbFallbackUsed,
   tokenBalances,
   isLoading,
   isRefreshing,
@@ -102,10 +101,7 @@ export function BalanceView({
     return (
       <Card className="border-primary/20">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Coins className="h-5 w-5 text-primary" />
-            Vault Balances
-          </CardTitle>
+          <CardTitle>Vault Balances</CardTitle>
           <CardDescription>Loading vault balances...</CardDescription>
         </CardHeader>
         <CardContent>
@@ -118,150 +114,100 @@ export function BalanceView({
   }
 
   return (
-    <Card className="border-primary/20">
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <Coins className="h-5 w-5 text-primary" />
-              Vault Balances
-            </CardTitle>
-            <CardDescription className="flex items-center gap-2 mt-1">
-              Last updated: {formatLastUpdated(lastUpdated)}
-              {showSpinner && (
-                <RefreshCw className="h-3 w-3 animate-spin text-primary" />
-              )}
-            </CardDescription>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleToggleLiveUpdates}
-              className="gap-2"
-            >
-              {liveUpdatesEnabled ? (
-                <>
-                  <Pause className="h-4 w-4" />
-                  Pause
-                </>
-              ) : (
-                <>
-                  <Play className="h-4 w-4" />
-                  Resume
-                </>
-              )}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleRefresh}
-              disabled={isRefreshingLocal}
-              className="gap-2"
-            >
-              <RefreshCw className={`h-4 w-4 ${isRefreshingLocal ? 'animate-spin' : ''}`} />
-              Refresh
-            </Button>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {error && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-
-        {/* BNB Balance */}
-        <div className="space-y-2">
+    <div className="space-y-4">
+      {/* Controls Card */}
+      <Card className="border-primary/20">
+        <CardHeader>
           <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Vault Controls</CardTitle>
+              <CardDescription className="flex items-center gap-2 mt-1">
+                Last updated: {formatLastUpdated(lastUpdated)}
+                {showSpinner && (
+                  <RefreshCw className="h-3 w-3 animate-spin text-primary" />
+                )}
+              </CardDescription>
+            </div>
             <div className="flex items-center gap-2">
-              <span className="font-semibold">BNB</span>
-              {bnbFallbackUsed && (
-                <Badge variant="outline" className="text-xs">
-                  Fallback
-                </Badge>
-              )}
-            </div>
-            <div className="text-right">
-              <div className="font-mono font-semibold">{bnbBalance}</div>
-              {bnbValuation.usdValue && !isLoadingPrices && (
-                <div className="text-xs text-muted-foreground flex items-center gap-1 justify-end">
-                  <TrendingUp className="h-3 w-3" />
-                  ${bnbValuation.usdValue}
-                </div>
-              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleToggleLiveUpdates}
+                className="gap-2"
+              >
+                {liveUpdatesEnabled ? (
+                  <>
+                    <Pause className="h-4 w-4" />
+                    <span className="hidden sm:inline">Pause</span>
+                  </>
+                ) : (
+                  <>
+                    <Play className="h-4 w-4" />
+                    <span className="hidden sm:inline">Resume</span>
+                  </>
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRefresh}
+                disabled={isRefreshingLocal}
+                className="gap-2"
+              >
+                <RefreshCw className={`h-4 w-4 ${isRefreshingLocal ? 'animate-spin' : ''}`} />
+                <span className="hidden sm:inline">Refresh</span>
+              </Button>
             </div>
           </div>
-          {bnbError && (
-            <Alert variant="destructive" className="py-2">
-              <AlertCircle className="h-3 w-3" />
-              <AlertDescription className="text-xs">{bnbError}</AlertDescription>
-            </Alert>
-          )}
-        </div>
-
-        {/* Token Balances */}
-        {tokenBalances.length > 0 && (
-          <>
-            <Separator />
-            <div className="space-y-3">
-              {tokenBalances.map((token) => {
-                const valuation = tokenValuations.get(token.address);
-                return (
-                  <div key={token.address} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold">{token.symbol}</span>
-                      <span className="text-xs text-muted-foreground font-mono">
-                        {token.address.slice(0, 6)}...{token.address.slice(-4)}
-                      </span>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-mono font-semibold">{token.balance}</div>
-                      {valuation && !isLoadingPrices && (
-                        <div className="text-xs text-muted-foreground flex items-center gap-1 justify-end">
-                          <TrendingUp className="h-3 w-3" />
-                          {valuation.usdValue && `$${valuation.usdValue}`}
-                          {valuation.bnbValue && ` (${valuation.bnbValue} BNB)`}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </>
+        </CardHeader>
+        {(error || bnbError) && (
+          <CardContent>
+            {error && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+            {bnbError && !error && (
+              <Alert variant="destructive" className="mt-2">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>BNB: {bnbError}</AlertDescription>
+              </Alert>
+            )}
+          </CardContent>
         )}
-
-        {tokenBalances.length === 0 && (
-          <div className="text-center py-4 text-muted-foreground text-sm">
-            No token balances to display
-          </div>
-        )}
-
-        {/* Metadata Cache Info */}
         {metadataCacheSize > 0 && onClearMetadataCache && (
           <>
             <Separator />
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <Database className="h-3 w-3" />
-                <span>{metadataCacheSize} token{metadataCacheSize !== 1 ? 's' : ''} cached</span>
+            <CardContent className="pt-4">
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <div className="flex items-center gap-2">
+                  <Database className="h-3 w-3" />
+                  <span>{metadataCacheSize} token{metadataCacheSize !== 1 ? 's' : ''} cached</span>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleClearCache}
+                  className="h-7 gap-1 text-xs"
+                >
+                  <X className="h-3 w-3" />
+                  Clear Cache
+                </Button>
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleClearCache}
-                className="h-6 text-xs"
-              >
-                <X className="h-3 w-3 mr-1" />
-                Clear Cache
-              </Button>
-            </div>
+            </CardContent>
           </>
         )}
-      </CardContent>
-    </Card>
+      </Card>
+
+      {/* Token Balances Table */}
+      <VaultBalancesTable
+        bnbBalance={bnbBalance}
+        bnbValuation={bnbValuation}
+        tokenBalances={tokenBalances}
+        tokenValuations={tokenValuations}
+        isLoadingPrices={isLoadingPrices}
+      />
+    </div>
   );
 }

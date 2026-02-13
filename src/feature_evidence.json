@@ -2,10 +2,11 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-ensure-the-wallet-connection-ui-is-reliably-shown-on-the-dashboard-whenever-the-user-is-not-connected-web3-is-still-initializing-or-the-connected-wallet-is-on-a-non-bsc-network-chainid-56-this-must-prevent-states-where-the-user-cannot-see-a-visible-connect-wallet-wrong-network-prompt-due-to-initialization-timing-or-stale-web3-state",
-      "featureTitle": "Ensure the wallet connection UI is reliably shown on the Dashboard whenever the user is not connected, Web3 is still initializing, or the connected wallet is on a non-BSC network (chainId != 56). This must prevent states where the user cannot see a visible \"Connect Wallet\" / \"Wrong Network\" prompt due to initialization timing or stale Web3 state.",
+      "featureId": "feature-fix-the-live-vault-balance-data-fetch-polling-so-it-does-not-trigger-repeated-refresh-loops-and-does-not-prevent-the-wallet-connect-ui-from-being-shown-when-needed",
+      "featureTitle": "Fix the live vault balance data-fetch/polling so it does not trigger repeated refresh loops and does not prevent the Wallet Connect UI from being shown when needed.",
       "files": [
-        "frontend/src/components/WalletConnect.tsx",
+        "frontend/src/components/BalanceView.tsx",
+        "frontend/src/hooks/useVaultBalances.ts",
         "frontend/src/pages/Dashboard.tsx"
       ],
       "components": [
@@ -21,11 +22,13 @@
       "confidence": "high"
     },
     {
-      "featureId": "feature-fix-vault-balance-refresh-so-that-it-always-completes-success-or-error-and-reliably-updates-balances-after-wallet-connect-account-change-chain-change-and-manual-refresh-clicks-manual-refresh-must-not-no-op-due-to-an-in-flight-polling-fetch-it-should-either-a-await-the-in-flight-fetch-and-then-run-a-new-fetch-or-b-coalesce-into-a-single-fetch-that-updates-state-and-resolves-the-refresh-call",
-      "featureTitle": "Fix vault balance refresh so that it always completes (success or error) and reliably updates balances after wallet connect, account change, chain change, and manual refresh clicks. Manual refresh must not no-op due to an in-flight polling fetch; it should either (a) await the in-flight fetch and then run a new fetch, or (b) coalesce into a single fetch that updates state and resolves the refresh call.",
+      "featureId": "feature-move-the-wallet-connect-entry-point-to-the-top-of-the-screen-so-users-can-always-see-a-wallet-connect-button-in-the-top-area-above-the-hero-content-regardless-of-balance-refresh-behavior",
+      "featureTitle": "Move the Wallet Connect entry point to the top of the screen so users can always see a Wallet Connect button in the top area (above the hero/content), regardless of balance refresh behavior.",
       "files": [
-        "frontend/src/components/BalanceView.tsx",
-        "frontend/src/hooks/useVaultBalances.ts"
+        "frontend/src/App.tsx",
+        "frontend/src/components/Header.tsx",
+        "frontend/src/components/WalletConnectTopBar.tsx",
+        "frontend/src/pages/Dashboard.tsx"
       ],
       "components": [
         "core-infrastructure@1.0.2",
@@ -40,11 +43,12 @@
       "confidence": "high"
     },
     {
-      "featureId": "feature-improve-web3-provider-event-handling-to-keep-account-chainid-state-in-sync-with-the-wallet-provider-and-reduce-stale-states-that-can-hide-the-connect-ui-or-block-refresh-flows-include-handling-for-relevant-eip-1193-events-at-minimum-accountschanged-chainchanged-connect-disconnect-and-ensure-state-is-reset-updated-consistently-on-each-event",
-      "featureTitle": "Improve Web3 provider event handling to keep account/chainId state in sync with the wallet provider and reduce stale states that can hide the connect UI or block refresh flows. Include handling for relevant EIP-1193 events (at minimum: accountsChanged, chainChanged, connect, disconnect) and ensure state is reset/updated consistently on each event.",
+      "featureId": "feature-update-the-vault-balances-display-to-be-explicitly-token-wise-show-a-clear-list-table-where-each-row-is-a-token-label-bnb-plus-other-tokens-with-its-balance",
+      "featureTitle": "Update the vault balances display to be explicitly token-wise: show a clear list/table where each row is a token label (BNB plus other tokens) with its balance.",
       "files": [
-        "frontend/src/global.d.ts",
-        "frontend/src/hooks/useWeb3.tsx"
+        "frontend/src/components/BalanceView.tsx",
+        "frontend/src/components/VaultBalancesTable.tsx",
+        "frontend/src/pages/Dashboard.tsx"
       ],
       "components": [
         "core-infrastructure@1.0.2",

@@ -48,9 +48,14 @@ export function useVaultBalances(enablePolling = true) {
 
   // Track in-flight fetch promise for coalescing
   const inFlightFetchRef = useRef<Promise<void> | null>(null);
+  
+  // Keep last successful balances to avoid resetting on errors
+  const lastSuccessfulBnbRef = useRef<{ balance: string; balanceRaw: bigint }>({ balance: '0', balanceRaw: 0n });
+  const lastSuccessfulTokensRef = useRef<TokenBalance[]>([]);
 
-  // Check if on correct network
+  // Check if on correct network - treat null as "detecting" not "wrong"
   const isOnBSC = chainId === BSC_CHAIN_ID;
+  const isDetectingNetwork = chainId === null && isConnected;
 
   const fetchBnbBalance = useCallback(async () => {
     if (!isConnected || !isOnBSC) return;
@@ -70,11 +75,20 @@ export function useVaultBalances(enablePolling = true) {
 
       setBnbBalanceRaw(balance);
       setBnbBalance(formatted);
+      
+      // Store successful result
+      lastSuccessfulBnbRef.current = { balance: formatted, balanceRaw: balance };
     } catch (err: any) {
       console.error('Failed to fetch BNB balance:', err);
-      setBnbError(err.message || 'Failed to fetch BNB balance');
-      setBnbBalance('0');
-      setBnbBalanceRaw(0n);
+      const errorMsg = err.message || 'Failed to fetch BNB balance';
+      setBnbError(errorMsg);
+      
+      // Keep last known balance instead of resetting to 0
+      if (lastSuccessfulBnbRef.current.balance !== '0') {
+        setBnbBalance(lastSuccessfulBnbRef.current.balance);
+        setBnbBalanceRaw(lastSuccessfulBnbRef.current.balanceRaw);
+      }
+      
       throw err; // Re-throw to be caught by fetchAllBalances
     }
   }, [callContract, isConnected, isOnBSC]);
@@ -118,6 +132,7 @@ export function useVaultBalances(enablePolling = true) {
   const fetchTokenBalances = useCallback(async () => {
     if (!isConnected || !isOnBSC || watchedTokens.length === 0) {
       setTokenBalances([]);
+      lastSuccessfulTokensRef.current = [];
       return;
     }
 
@@ -157,6 +172,7 @@ export function useVaultBalances(enablePolling = true) {
 
       const validBalances = balances.filter((b): b is TokenBalance => b !== null);
       setTokenBalances(validBalances);
+      lastSuccessfulTokensRef.current = validBalances;
 
       // If some balances failed but not all, don't throw
       if (validBalances.length === 0 && watchedTokens.length > 0) {
@@ -164,13 +180,19 @@ export function useVaultBalances(enablePolling = true) {
       }
     } catch (err: any) {
       console.error('Failed to fetch token balances:', err);
+      
+      // Keep last known token balances on error
+      if (lastSuccessfulTokensRef.current.length > 0) {
+        setTokenBalances(lastSuccessfulTokensRef.current);
+      }
+      
       throw err; // Re-throw to be caught by fetchAllBalances
     }
   }, [callContract, isConnected, isOnBSC, watchedTokens, fetchTokenMetadata]);
 
   const fetchAllBalances = useCallback(
     async (isInitial = false) => {
-      // Check if on correct network
+      // Don't fetch if not connected
       if (!isConnected) {
         setIsLoading(false);
         setIsRefreshing(false);
@@ -178,6 +200,16 @@ export function useVaultBalances(enablePolling = true) {
         return;
       }
 
+      // If detecting network, show loading but don't error
+      if (isDetectingNetwork) {
+        if (isInitial) {
+          setIsLoading(true);
+        }
+        setError(null);
+        return;
+      }
+
+      // If on wrong network, set error but don't reset balances
       if (!isOnBSC) {
         setIsLoading(false);
         setIsRefreshing(false);
@@ -198,13 +230,14 @@ export function useVaultBalances(enablePolling = true) {
         setLastUpdated(new Date());
       } catch (err: any) {
         console.error('Failed to fetch balances:', err);
+        // Set error but keep last known balances visible
         setError(err.message || 'Failed to fetch balances');
       } finally {
         setIsLoading(false);
         setIsRefreshing(false);
       }
     },
-    [isConnected, isOnBSC, fetchBnbBalance, fetchTokenBalances]
+    [isConnected, isOnBSC, isDetectingNetwork, fetchBnbBalance, fetchTokenBalances]
   );
 
   /**
@@ -255,13 +288,13 @@ export function useVaultBalances(enablePolling = true) {
       setIsRefreshing(false);
       if (!isConnected) {
         setError(null);
-      } else if (!isOnBSC) {
+      } else if (!isOnBSC && !isDetectingNetwork) {
         setError('Please switch to Binance Smart Chain (BSC) network');
       }
     }
-  }, [isConnected, isOnBSC, fetchAllBalances]);
+  }, [isConnected, isOnBSC, isDetectingNetwork, fetchAllBalances]);
 
-  // Polling effect
+  // Polling effect - only poll when connected, on BSC, and live updates enabled
   useEffect(() => {
     if (!enablePolling || !liveUpdatesEnabled || !isConnected || !isOnBSC) {
       return;

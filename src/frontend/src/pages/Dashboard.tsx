@@ -39,12 +39,11 @@ export function Dashboard() {
   // Check if on correct network
   const isOnBSC = chainId === BSC_CHAIN_ID;
   
-  // Show WalletConnect when:
-  // - Still initializing (to avoid blank screen)
+  // Show WalletConnect panel when:
+  // - Still initializing
   // - Not connected
-  // - Connected but on wrong network
-  // - chainId is unknown (null) even if account exists
-  const shouldShowWalletConnect = isInitializing || !isConnected || !isOnBSC || chainId === null;
+  // - Connected but on wrong network (and chainId is known)
+  const shouldShowWalletConnectPanel = isInitializing || !isConnected || (isConnected && chainId !== null && !isOnBSC);
 
   return (
     <div className="min-h-screen bg-background">
@@ -64,8 +63,8 @@ export function Dashboard() {
           </p>
         </div>
 
-        {/* Wallet Connection - Show when initializing, not connected, OR on wrong network */}
-        {shouldShowWalletConnect && (
+        {/* Wallet Connection Panel - Show when not ready */}
+        {shouldShowWalletConnectPanel && (
           <div className="max-w-md mx-auto">
             <WalletConnect />
             {isConnected && chainId !== null && !isOnBSC && (
@@ -78,8 +77,8 @@ export function Dashboard() {
           </div>
         )}
 
-        {/* Main Content - Only show when connected AND on BSC AND not initializing */}
-        {!isInitializing && isConnected && isOnBSC && chainId !== null && (
+        {/* Main Content - Show when connected AND on BSC (or detecting network) */}
+        {!isInitializing && isConnected && (isOnBSC || chainId === null) && (
           <div className="grid gap-6 lg:grid-cols-2">
             {/* Left Column: Balances */}
             <div className="space-y-6">

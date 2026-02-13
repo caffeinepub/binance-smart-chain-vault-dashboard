@@ -1,7 +1,7 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-13T21:46:12.631Z",
+  "generatedAt": "2026-02-13T21:53:54.255Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
@@ -12,41 +12,49 @@
     "items": [
       {
         "id": "REQ-1",
-        "summary": "Ensure the wallet connection UI is reliably shown on the Dashboard whenever the user is not connected, Web3 is still initializing, or the connected wallet is on a non-BSC network (chainId != 56). This must prevent states where the user cannot see a visible \"Connect Wallet\" / \"Wrong Network\" prompt due to initialization timing or stale Web3 state.",
+        "summary": "Fix the live vault balance data-fetch/polling so it does not trigger repeated refresh loops and does not prevent the Wallet Connect UI from being shown when needed.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/pages/Dashboard.tsx",
-          "frontend/src/components/WalletConnect.tsx"
+          "frontend/src/hooks/useVaultBalances.ts",
+          "frontend/src/components/BalanceView.tsx",
+          "frontend/src/pages/Dashboard.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/pages/Dashboard.tsx",
-          "frontend/src/components/WalletConnect.tsx"
+          "frontend/src/hooks/useVaultBalances.ts",
+          "frontend/src/components/BalanceView.tsx",
+          "frontend/src/pages/Dashboard.tsx"
         ]
       },
       {
         "id": "REQ-2",
-        "summary": "Fix vault balance refresh so that it always completes (success or error) and reliably updates balances after wallet connect, account change, chain change, and manual refresh clicks. Manual refresh must not no-op due to an in-flight polling fetch; it should either (a) await the in-flight fetch and then run a new fetch, or (b) coalesce into a single fetch that updates state and resolves the refresh call.",
+        "summary": "Move the Wallet Connect entry point to the top of the screen so users can always see a Wallet Connect button in the top area (above the hero/content), regardless of balance refresh behavior.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/hooks/useVaultBalances.ts",
-          "frontend/src/components/BalanceView.tsx"
+          "frontend/src/components/WalletConnectTopBar.tsx",
+          "frontend/src/components/Header.tsx",
+          "frontend/src/App.tsx",
+          "frontend/src/pages/Dashboard.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/hooks/useVaultBalances.ts",
-          "frontend/src/components/BalanceView.tsx"
+          "frontend/src/components/WalletConnectTopBar.tsx",
+          "frontend/src/components/Header.tsx",
+          "frontend/src/App.tsx",
+          "frontend/src/pages/Dashboard.tsx"
         ]
       },
       {
         "id": "REQ-3",
-        "summary": "Improve Web3 provider event handling to keep account/chainId state in sync with the wallet provider and reduce stale states that can hide the connect UI or block refresh flows. Include handling for relevant EIP-1193 events (at minimum: accountsChanged, chainChanged, connect, disconnect) and ensure state is reset/updated consistently on each event.",
+        "summary": "Update the vault balances display to be explicitly token-wise: show a clear list/table where each row is a token label (BNB plus other tokens) with its balance.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/hooks/useWeb3.tsx",
-          "frontend/src/global.d.ts"
+          "frontend/src/components/VaultBalancesTable.tsx",
+          "frontend/src/components/BalanceView.tsx",
+          "frontend/src/pages/Dashboard.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/hooks/useWeb3.tsx",
-          "frontend/src/global.d.ts"
+          "frontend/src/components/VaultBalancesTable.tsx",
+          "frontend/src/components/BalanceView.tsx",
+          "frontend/src/pages/Dashboard.tsx"
         ]
       }
     ]
@@ -56,11 +64,12 @@
     "feature_evidence.json",
     "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
+    "frontend/src/App.tsx",
     "frontend/src/components/BalanceView.tsx",
-    "frontend/src/components/WalletConnect.tsx",
-    "frontend/src/global.d.ts",
+    "frontend/src/components/Header.tsx",
+    "frontend/src/components/VaultBalancesTable.tsx",
+    "frontend/src/components/WalletConnectTopBar.tsx",
     "frontend/src/hooks/useVaultBalances.ts",
-    "frontend/src/hooks/useWeb3.tsx",
     "frontend/src/pages/Dashboard.tsx",
     "project_state.json",
     "scratch/component-selection.json",

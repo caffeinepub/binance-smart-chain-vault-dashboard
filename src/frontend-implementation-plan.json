@@ -1,71 +1,89 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Fix wallet connect visibility and vault balance refresh reliability",
+  "title": "Stabilize vault balance polling, keep Wallet Connect always visible, and present token-wise balances",
   "requirements": [
     {
       "id": "REQ-1",
-      "summary": "Make Dashboard always render a visible wallet connection area (or loading state) when disconnected, initializing, or on non-BSC chain, and never show balances/operations in those states.",
+      "summary": "Stabilize vault balance polling/refetch to avoid refresh loops, preserve Wallet Connect visibility, and coalesce overlapping fetches with usable error+retry states.",
       "acceptanceCriteria": [
-        "With MetaMask installed and no account connected, the Dashboard renders the WalletConnect UI with a \"Connect Wallet\" button.",
-        "While Web3 is initializing (e.g., initial page load before eth_accounts/eth_chainId resolve), the Dashboard shows the WalletConnect area (or a clear loading state in the same area) rather than hiding it.",
-        "When an account is connected but chainId != 56, the Dashboard renders the WalletConnect UI in \"Wrong Network\" mode and does not render the balances/operations panels.",
-        "When the user switches back to chainId 56, the balances/operations panels become available without requiring a hard refresh."
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/pages/Dashboard.tsx",
-          "operation": "modify",
-          "description": "Update gating logic to explicitly account for Web3 initialization (useWeb3.isInitializing) and unknown chainId states so the WalletConnect area is always rendered when disconnected, initializing, chainId is unknown, or chainId != 56; ensure balances/operations panels only render when connected, chainId === 56, and not initializing."
-        },
-        {
-          "path": "frontend/src/components/WalletConnect.tsx",
-          "operation": "modify",
-          "description": "Enhance WalletConnect rendering to handle initialization/unknown chainId states (e.g., show a clear 'Checking wallet/network…' loading state when provider is present and Web3 is initializing) and to avoid showing a misleading 'Connect Wallet' prompt when an account is already present but chainId has not resolved yet."
-        }
-      ]
-    },
-    {
-      "id": "REQ-2",
-      "summary": "Ensure vault balance fetching always completes and refresh works reliably after connect, account/chain changes, and manual refresh even during in-flight polling fetches.",
-      "acceptanceCriteria": [
-        "After clicking \"Connect Wallet\" (on BSC chainId 56), Vault Balances load and display without requiring a page reload.",
-        "Clicking the \"Refresh\" button in BalanceView always results in either (a) updated balances and \"Last updated\" time changing, or (b) a clear error message—never an indefinite spinner.",
-        "If polling is enabled and a poll fetch is currently in progress, clicking manual Refresh still results in a completed refresh sequence (it must not return immediately without updating).",
-        "When accounts are changed in the wallet, balances refresh for the new context and the UI does not get stuck in loading/refreshing state.",
-        "When chain is changed away from BSC and back to BSC, balances recover and can be refreshed successfully."
+        "With live updates enabled, the UI does not continually re-render/refresh the page in a loop.",
+        "Polling/refreshing balances does not cause the Wallet Connect UI to disappear when the user is not connected or is on the wrong network.",
+        "If balance fetch fails (timeouts/RPC errors), the app shows an error state but remains usable (no refresh loop), and the user can manually retry refresh.",
+        "Manual refresh and polling are coalesced so multiple overlapping fetches do not cascade into repeated state resets."
       ],
       "file_operations": [
         {
           "path": "frontend/src/hooks/useVaultBalances.ts",
           "operation": "modify",
-          "description": "Replace the current isFetchingRef early-return behavior with an awaitable in-flight promise + coalescing/queueing strategy so refetch() never no-ops: manual refresh should await the current fetch and then trigger (or coalesce into) a new fetch that updates state and lastUpdated; ensure isLoading/isRefreshing are always cleared in all paths."
+          "description": "Harden the balance fetch/polling logic to prevent cascaded state resets: keep last-known balances on fetch errors (do not reset to 0 on failures), treat chainId=null as an 'unknown/detecting network' state (avoid wrong-network error churn), and adjust coalescing so polling and manual refresh share a single in-flight promise (manual refresh should reuse in-flight work rather than always triggering an additional fetch)."
         },
         {
           "path": "frontend/src/components/BalanceView.tsx",
           "operation": "modify",
-          "description": "Adjust refresh button behavior to align with the updated refetch contract: ensure manual refresh awaits the hook's refresh promise and surfaces completion via updated 'Last updated' (and error UI when applicable) without leaving a spinner active indefinitely."
+          "description": "Ensure the balances UI remains stable during refresh and error conditions: keep rendering the token-wise structure while showing a non-blocking error state, ensure the existing Refresh button acts as a manual retry, and avoid any UI behavior that looks like a full-page refresh/flicker. Use existing shadcn-ui primitives (Button/Card/Alert/Badge/Separator) for consistent states; verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/pages/Dashboard.tsx",
+          "operation": "modify",
+          "description": "Decouple Wallet Connect visibility from balance fetching by ensuring the page does not conditionally depend on vault balance hook transient states for showing Wallet Connect. Keep the 'connected & on BSC' gate for main content, but avoid any conditional rendering patterns that cause connect UI to blink/disappear during balance refresh."
+        }
+      ]
+    },
+    {
+      "id": "REQ-2",
+      "summary": "Move Wallet Connect entry point into a sticky top area so users always have a visible connect control above the dashboard content.",
+      "acceptanceCriteria": [
+        "A Wallet Connect button is visible at the top of the Dashboard layout when the user is not connected (and/or is initializing / wrong network).",
+        "The Wallet Connect UI remains accessible without requiring the user to scroll.",
+        "When connected, the top area no longer shows a primary “Connect Wallet” call-to-action (it may show connection status instead)."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/components/WalletConnectTopBar.tsx",
+          "operation": "create",
+          "description": "Create a compact, always-visible top-bar wallet control that uses the existing useWeb3 context to show: Connect (not connected), Switching CTA (wrong network), and a connected status view (connected). Compose with shadcn-ui Button and Alert styles where needed; verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/components/Header.tsx",
+          "operation": "modify",
+          "description": "Extend the sticky Header to include the new WalletConnectTopBar control in the top-right area while preserving branding and theme toggle. Compose shadcn-ui Button(s) already used in Header; verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/App.tsx",
+          "operation": "modify",
+          "description": "Wire the Header into the app shell so the sticky top area is always rendered above the Dashboard, ensuring the Wallet Connect entry point remains visible regardless of dashboard/polling behavior."
+        },
+        {
+          "path": "frontend/src/pages/Dashboard.tsx",
+          "operation": "modify",
+          "description": "Adjust the existing in-page WalletConnect rendering to avoid duplicating the primary connect CTA once the top entry point exists (e.g., keep the full instructional panel for not-connected/wrong-network if desired, but ensure the top button is the always-visible entry point). Use existing shadcn-ui layout components (Card/Alert/Tabs) without editing ui components; verify the component's usage instructions before implementing."
         }
       ]
     },
     {
       "id": "REQ-3",
-      "summary": "Improve EIP-1193 provider event handling to keep account/chainId state in sync, reset state consistently, and avoid stale UI/refresh states.",
+      "summary": "Present vault balances in an explicit token-wise list/table including a BNB row and one row per token with symbol and balance.",
       "acceptanceCriteria": [
-        "If the wallet disconnects or the user removes all accounts, the app returns to the WalletConnect screen (\"Connect Wallet\" visible).",
-        "If the wallet reconnects (provider emits connect) the app updates chainId and shows the correct WalletConnect mode (connected-on-wrong-network vs ready).",
-        "No console errors are thrown due to event listener cleanup or missing handlers when navigating/reloading the app."
+        "The balances UI clearly presents BNB as a token row and displays other tokens as separate rows with their token labels (symbol) and balances.",
+        "If there are no tokens to display beyond BNB, the UI communicates that clearly (without hiding the token-wise structure).",
+        "Token rows remain readable during refresh (no flicker that looks like page refresh)."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/hooks/useWeb3.tsx",
-          "operation": "modify",
-          "description": "Implement robust EIP-1193 event handling for accountsChanged, chainChanged, connect, and disconnect with consistent state updates/resets; avoid removeAllListeners and instead add/remove specific handler functions to prevent cleanup-related issues and stale state; ensure chainId/account are refreshed on connect and cleared on disconnect/accounts empty."
+          "path": "frontend/src/components/VaultBalancesTable.tsx",
+          "operation": "create",
+          "description": "Create a dedicated token-wise balances table/list component that renders a unified set of rows: one for BNB and one per token (symbol + balance), with a clear 'no additional tokens' message while keeping the table structure visible. Compose with existing shadcn-ui Card/Separator/Badge/Alert primitives as needed; verify the component's usage instructions before implementing."
         },
         {
-          "path": "frontend/src/global.d.ts",
+          "path": "frontend/src/components/BalanceView.tsx",
           "operation": "modify",
-          "description": "Extend the Window.ethereum type definitions as needed to include EIP-1193 connect/disconnect events and per-event listener removal (e.g., removeListener) so updated event handling in useWeb3 is type-safe."
+          "description": "Refactor BalanceView to delegate token-wise rendering to VaultBalancesTable so the UI is explicitly row-based for BNB and other tokens, and remains stable during background refresh (keep values visible; show a subtle 'refreshing' indicator rather than clearing rows). Compose (do not edit) shadcn-ui components used by BalanceView; verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/pages/Dashboard.tsx",
+          "operation": "modify",
+          "description": "Ensure the Dashboard continues to pass BNB and token balance data into the updated BalanceView/token-wise table display, and that the layout remains readable during refresh without appearing to 'page refresh'."
         }
       ]
     }

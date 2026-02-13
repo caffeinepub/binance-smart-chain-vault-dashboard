@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Wallet, ArrowDownToLine, ArrowUpFromLine, Info, AlertCircle } from 'lucide-react';
+import { Wallet, ArrowDownToLine, ArrowUpFromLine, Info, AlertCircle, Shield } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import WalletConnect from '@/components/WalletConnect';
@@ -40,7 +40,7 @@ export default function Dashboard() {
   // Show loading state during initialization
   if (isInitializing) {
     return (
-      <div className="min-h-screen flex flex-col bg-gradient-to-br from-background via-background to-accent/5">
+      <div className="min-h-screen flex flex-col bg-gradient-to-br from-background via-primary/5 to-chart-1/10">
         <Header />
         <main className="flex-1 container mx-auto px-4 py-6 md:py-8">
           <div className="max-w-4xl mx-auto space-y-6">
@@ -65,25 +65,27 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-background via-background to-accent/5">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-background via-primary/5 to-chart-1/10">
       <Header />
       
       <main className="flex-1 container mx-auto px-4 py-6 md:py-8">
         <div className="max-w-4xl mx-auto space-y-6">
           {/* Welcome Section */}
-          <div className="text-center space-y-2">
-            <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-primary via-chart-1 to-chart-2 bg-clip-text text-transparent">
-              BSC Vault Dashboard
+          <div className="text-center space-y-3 py-6">
+            <div className="flex items-center justify-center gap-3 mb-2">
+              <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-primary via-chart-1 to-chart-2 flex items-center justify-center shadow-xl">
+                <Shield className="h-7 w-7 text-primary-foreground" />
+              </div>
+            </div>
+            <h1 className="text-3xl md:text-5xl font-bold bg-gradient-to-r from-primary via-chart-1 to-chart-2 bg-clip-text text-transparent">
+              Digital Asset Vault
             </h1>
-            <p className="text-muted-foreground text-sm md:text-base">
-              Manage your BEP20 tokens and BNB on Binance Smart Chain
-            </p>
           </div>
 
           {/* Wallet Not Available Alert (Mobile) */}
           {!hasMetaMask && isMobile && (
-            <Alert className="border-chart-1">
-              <AlertCircle className="h-4 w-4" />
+            <Alert className="border-primary/30 bg-primary/5">
+              <AlertCircle className="h-4 w-4 text-primary" />
               <AlertTitle>Open in Wallet Browser</AlertTitle>
               <AlertDescription className="space-y-2">
                 <p>To use this dApp on mobile, open it inside your wallet app's built-in browser.</p>
@@ -150,7 +152,7 @@ export default function Dashboard() {
 
           {/* Wallet Connection Card (when not connected) */}
           {!isConnected && (
-            <Card className="border-2 border-primary/20 shadow-lg">
+            <Card className="border-2 border-primary/30 shadow-xl bg-gradient-to-br from-card via-primary/5 to-chart-1/5">
               <CardContent className="pt-6">
                 <WalletConnect />
               </CardContent>
@@ -159,7 +161,7 @@ export default function Dashboard() {
 
           {/* Connected Wallet Info */}
           {isConnected && (
-            <Card className="bg-gradient-to-r from-primary/10 via-chart-1/10 to-chart-2/10 border-primary/30">
+            <Card className="bg-gradient-to-r from-primary/10 via-chart-1/10 to-chart-2/10 border-primary/40 shadow-md">
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between flex-wrap gap-4">
                   <div className="flex items-center gap-3">
@@ -180,31 +182,31 @@ export default function Dashboard() {
 
           {/* Main Tabs - Always visible */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-4 h-auto">
+            <TabsList className="grid w-full grid-cols-4 h-auto bg-primary/10 border border-primary/20">
               <TabsTrigger 
                 value="balances" 
-                className="flex flex-col md:flex-row items-center gap-1 md:gap-2 py-2 px-2 md:px-4 min-h-[3rem] md:min-h-0"
+                className="flex flex-col md:flex-row items-center gap-1 md:gap-2 py-2 px-2 md:px-4 min-h-[3rem] md:min-h-0 data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-chart-1 data-[state=active]:text-primary-foreground"
               >
                 <Wallet className="h-4 w-4 flex-shrink-0" />
                 <span className="text-xs md:text-sm">Balances</span>
               </TabsTrigger>
               <TabsTrigger 
                 value="deposit" 
-                className="flex flex-col md:flex-row items-center gap-1 md:gap-2 py-2 px-2 md:px-4 min-h-[3rem] md:min-h-0"
+                className="flex flex-col md:flex-row items-center gap-1 md:gap-2 py-2 px-2 md:px-4 min-h-[3rem] md:min-h-0 data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-chart-1 data-[state=active]:text-primary-foreground"
               >
                 <ArrowDownToLine className="h-4 w-4 flex-shrink-0" />
                 <span className="text-xs md:text-sm">Deposit</span>
               </TabsTrigger>
               <TabsTrigger 
                 value="withdraw" 
-                className="flex flex-col md:flex-row items-center gap-1 md:gap-2 py-2 px-2 md:px-4 min-h-[3rem] md:min-h-0"
+                className="flex flex-col md:flex-row items-center gap-1 md:gap-2 py-2 px-2 md:px-4 min-h-[3rem] md:min-h-0 data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-chart-1 data-[state=active]:text-primary-foreground"
               >
                 <ArrowUpFromLine className="h-4 w-4 flex-shrink-0" />
                 <span className="text-xs md:text-sm">Withdraw</span>
               </TabsTrigger>
               <TabsTrigger 
                 value="info" 
-                className="flex flex-col md:flex-row items-center gap-1 md:gap-2 py-2 px-2 md:px-4 min-h-[3rem] md:min-h-0"
+                className="flex flex-col md:flex-row items-center gap-1 md:gap-2 py-2 px-2 md:px-4 min-h-[3rem] md:min-h-0 data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-chart-1 data-[state=active]:text-primary-foreground"
               >
                 <Info className="h-4 w-4 flex-shrink-0" />
                 <span className="text-xs md:text-sm">Info</span>
@@ -216,81 +218,11 @@ export default function Dashboard() {
             </TabsContent>
 
             <TabsContent value="deposit" className="mt-6">
-              {!isConnected ? (
-                <Card>
-                  <CardContent className="pt-6">
-                    <Alert>
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertTitle>Wallet Connection Required</AlertTitle>
-                      <AlertDescription>
-                        Please connect your wallet to deposit tokens into the vault.
-                      </AlertDescription>
-                    </Alert>
-                  </CardContent>
-                </Card>
-              ) : isWrongNetwork ? (
-                <Card>
-                  <CardContent className="pt-6">
-                    <Alert variant="destructive">
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertTitle>Wrong Network</AlertTitle>
-                      <AlertDescription className="space-y-3">
-                        <p>Please switch to Binance Smart Chain (BSC) to perform deposits.</p>
-                        <Button
-                          onClick={handleSwitchNetwork}
-                          disabled={isSwitching}
-                          size="sm"
-                          variant="outline"
-                          className="bg-background hover:bg-background/80"
-                        >
-                          {isSwitching ? 'Switching...' : 'Switch to BSC Network'}
-                        </Button>
-                      </AlertDescription>
-                    </Alert>
-                  </CardContent>
-                </Card>
-              ) : (
-                <DepositForm vaultBalances={vaultBalances} />
-              )}
+              <DepositForm vaultBalances={vaultBalances} isConnected={isConnected} isWrongNetwork={isWrongNetwork} onSwitchNetwork={handleSwitchNetwork} isSwitching={isSwitching} />
             </TabsContent>
 
             <TabsContent value="withdraw" className="mt-6">
-              {!isConnected ? (
-                <Card>
-                  <CardContent className="pt-6">
-                    <Alert>
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertTitle>Wallet Connection Required</AlertTitle>
-                      <AlertDescription>
-                        Please connect your wallet to withdraw tokens from the vault.
-                      </AlertDescription>
-                    </Alert>
-                  </CardContent>
-                </Card>
-              ) : isWrongNetwork ? (
-                <Card>
-                  <CardContent className="pt-6">
-                    <Alert variant="destructive">
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertTitle>Wrong Network</AlertTitle>
-                      <AlertDescription className="space-y-3">
-                        <p>Please switch to Binance Smart Chain (BSC) to perform withdrawals.</p>
-                        <Button
-                          onClick={handleSwitchNetwork}
-                          disabled={isSwitching}
-                          size="sm"
-                          variant="outline"
-                          className="bg-background hover:bg-background/80"
-                        >
-                          {isSwitching ? 'Switching...' : 'Switch to BSC Network'}
-                        </Button>
-                      </AlertDescription>
-                    </Alert>
-                  </CardContent>
-                </Card>
-              ) : (
-                <WithdrawForm vaultBalances={vaultBalances} />
-              )}
+              <WithdrawForm vaultBalances={vaultBalances} isConnected={isConnected} isWrongNetwork={isWrongNetwork} onSwitchNetwork={handleSwitchNetwork} isSwitching={isSwitching} />
             </TabsContent>
 
             <TabsContent value="info" className="mt-6">

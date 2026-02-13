@@ -13,6 +13,7 @@ interface Web3ContextType {
   switchToBSC: () => Promise<void>;
   callContract: (to: string, data: string) => Promise<string>;
   sendTransaction: (to: string, data: string, value?: string) => Promise<string>;
+  getNativeBalance: (address: string) => Promise<bigint>;
 }
 
 const Web3Context = createContext<Web3ContextType | undefined>(undefined);
@@ -127,6 +128,11 @@ export function Web3Provider({ children }: { children: ReactNode }) {
    * Extract a readable error message from nested provider error structures
    */
   const extractErrorMessage = (error: any): string => {
+    // Handle raw 0x responses
+    if (typeof error === 'string' && (error === '0x' || error.trim() === '0x')) {
+      return 'Contract call reverted. The contract may not support this function.';
+    }
+
     // Try to extract nested error messages from provider responses
     if (error?.data?.message) {
       return error.data.message;
@@ -137,16 +143,28 @@ export function Web3Provider({ children }: { children: ReactNode }) {
     if (error?.message) {
       // Clean up common error prefixes
       let msg = error.message;
+      
+      // Handle 0x in message
+      if (msg === '0x' || msg.trim() === '0x') {
+        return 'Contract call reverted. The contract may not support this function.';
+      }
+      
       if (msg.includes('execution reverted:')) {
         const parts = msg.split('execution reverted:');
         if (parts[1]?.trim()) {
           return parts[1].trim();
         }
-        return 'Contract execution reverted';
+        return 'Contract execution reverted. Try again or check network connection.';
       }
+      
+      // Network errors
+      if (msg.includes('network') || msg.includes('fetch')) {
+        return 'Network error. Check your connection and try again.';
+      }
+      
       return msg;
     }
-    return 'Contract call failed';
+    return 'Contract call failed. Try again or check network connection.';
   };
 
   /**
@@ -183,7 +201,62 @@ export function Web3Provider({ children }: { children: ReactNode }) {
         throw new Error('No result returned from RPC call');
       }
 
+      // Check for 0x result which indicates revert
+      if (json.result === '0x' || json.result.trim() === '0x') {
+        throw new Error('Contract call reverted. The contract may not support this function.');
+      }
+
       return json.result;
+    } catch (err: any) {
+      throw new Error(extractErrorMessage(err));
+    }
+  };
+
+  /**
+   * Get native balance via eth_getBalance
+   * Uses injected provider if available, falls back to direct RPC
+   */
+  const getNativeBalance = async (address: string): Promise<bigint> => {
+    try {
+      // Try injected provider first if available
+      if (window.ethereum) {
+        try {
+          const result = await window.ethereum.request({
+            method: 'eth_getBalance',
+            params: [address, 'latest'],
+          });
+          return BigInt(result);
+        } catch (providerError: any) {
+          console.warn('Injected provider eth_getBalance failed, falling back to RPC:', providerError);
+          // Fall through to RPC fallback
+        }
+      }
+
+      // Fallback to direct RPC call
+      const response = await fetch(BSC_RPC_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'eth_getBalance',
+          params: [address, 'latest'],
+        }),
+      });
+
+      const json = await response.json();
+
+      if (json.error) {
+        throw new Error('RPC temporarily unavailable. Try again in a moment.');
+      }
+
+      if (!json.result) {
+        throw new Error('No balance returned from RPC');
+      }
+
+      return BigInt(json.result);
     } catch (err: any) {
       throw new Error(extractErrorMessage(err));
     }
@@ -208,6 +281,12 @@ export function Web3Provider({ children }: { children: ReactNode }) {
               'latest',
             ],
           });
+          
+          // Check for 0x result which indicates revert
+          if (result === '0x' || result.trim() === '0x') {
+            throw new Error('Contract call reverted. The contract may not support this function.');
+          }
+          
           return result;
         } catch (providerError: any) {
           console.warn('Injected provider eth_call failed, falling back to RPC:', providerError);
@@ -324,6 +403,7 @@ export function Web3Provider({ children }: { children: ReactNode }) {
         switchToBSC,
         callContract,
         sendTransaction,
+        getNativeBalance,
       }}
     >
       {children}

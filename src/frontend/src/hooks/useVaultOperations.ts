@@ -8,7 +8,7 @@ export function useVaultOperations() {
   const [isDepositing, setIsDepositing] = useState(false);
   const [isWithdrawing, setIsWithdrawing] = useState(false);
 
-  const depositToken = async (tokenAddress: string, amount: string) => {
+  const depositToken = async (tokenAddress: string, amount: string): Promise<string> => {
     if (!isConnected || !account) {
       throw new Error('Wallet not connected');
     }
@@ -34,13 +34,14 @@ export function useVaultOperations() {
         { type: 'uint256', value: amountWei }
       ]);
       
-      await sendTransaction(VAULT_ADDRESS, depositData);
+      const txHash = await sendTransaction(VAULT_ADDRESS, depositData);
+      return txHash;
     } finally {
       setIsDepositing(false);
     }
   };
 
-  const withdrawBNB = async (recipient: string, amount: string) => {
+  const withdrawBNB = async (recipient: string, amount: string): Promise<string> => {
     if (!isConnected || !account) {
       throw new Error('Wallet not connected');
     }
@@ -53,13 +54,14 @@ export function useVaultOperations() {
         { type: 'uint256', value: amountWei }
       ]);
       
-      await sendTransaction(VAULT_ADDRESS, data);
+      const txHash = await sendTransaction(VAULT_ADDRESS, data);
+      return txHash;
     } finally {
       setIsWithdrawing(false);
     }
   };
 
-  const withdrawToken = async (tokenAddress: string, recipient: string, amount: string) => {
+  const withdrawToken = async (tokenAddress: string, recipient: string, amount: string): Promise<string> => {
     if (!isConnected || !account) {
       throw new Error('Wallet not connected');
     }
@@ -73,7 +75,8 @@ export function useVaultOperations() {
         { type: 'uint256', value: amountWei }
       ]);
       
-      await sendTransaction(VAULT_ADDRESS, data);
+      const txHash = await sendTransaction(VAULT_ADDRESS, data);
+      return txHash;
     } finally {
       setIsWithdrawing(false);
     }

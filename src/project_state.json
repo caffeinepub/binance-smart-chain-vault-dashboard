@@ -1,13 +1,17 @@
 {
   "schemaVersion": "1.0.0",
-  "projectStateVersion": 15,
+  "projectStateVersion": 27,
   "summary": "Build a mobile-friendly DApp/dashboard for a Binance Smart Chain (BSC) multi-token vault smart contract, allowing wallet connection and vault interactions (view balances, deposit/withdraw tokens and BNB) using the provided contract address and ABI.",
   "architectural_notes": [
     "Target Binance Smart Chain and interact with the deployed vault contract via its ABI.",
     "Design UI to be mobile-first and handle missing injected provider (window.ethereum) gracefully (e.g., show instructions to open in MetaMask).",
     "Reuse the existing watched-token list as the source for a token dropdown in Deposit/Withdraw; fetch and cache token metadata (at least symbol/name/decimals) for display.",
     "Add optional price-quote integration to compute and display balance values in USDT/BNB (e.g., via on-chain DEX quote or external price API), with clear handling when pricing is unavailable.",
-    "Consider adding WalletConnect (or equivalent) to support non-injected mobile wallets (SafePal/Trust/TokenPocket, etc.) in addition to MetaMask."
+    "Consider adding WalletConnect (or equivalent) to support non-injected mobile wallets (SafePal/Trust/TokenPocket, etc.) in addition to MetaMask.",
+    "Apply an orange-and-white primary theme for the vault dashboard UI (avoid blue/purple), ensuring mobile-first readability and clear component contrast.",
+    "Deployment issue indicates the current caffeine.build URL may not be resolving (DNS/host outage); plan to redeploy to generate a fresh live URL and verify reachability from both mobile and desktop.",
+    "UI copy update: replace the title text \"Professional grade asset management on Binance Smart\" with \"Digital Asset Vault\".",
+    "Add a Deposit/Withdrawal History UI element that shows the current history state/details for deposits and withdrawals."
   ],
   "known_issues": [
     "Draft/preview build is not working (user reports it does not load/work on device).",
@@ -15,9 +19,12 @@
     "Adding a token by contract address is not working (watch list / token balance lookup by address fails).",
     "Balance reads are reverting with `execution reverted: 0x`, causing BNB and token balances to not display.",
     "BNB balance is not showing in some UI states (e.g., when opening Deposit/Withdraw).",
-    "Deposit/Withdraw token contract dropdown UI overlaps the amount input due to transparency/stacking, reducing readability."
+    "Deposit/Withdraw token contract dropdown UI overlaps the amount input due to transparency/stacking, reducing readability.",
+    "BNB balance still not showing in the latest deployed/review build (user confirmation).",
+    "Live deployment/preview link shows \"source code not loaded\" error for the user.",
+    "Live deployment URL is unreachable on both phone and laptop (\"This site can't be reached\" / \"Server IP address could not be found\"), indicating DNS/host resolution failure rather than an in-app boot error."
   ],
-  "isFixRequest": true,
+  "isFixRequest": false,
   "existing_features": [
     {
       "id": "feature-ensure-the-dapp-connects-to-and-interacts-with-the-binance-smart-chain-vault-contract-at-address-0xd2e7da1e8e2cda1512a5cc9d1c477d95599f0ec4-using-the-provided-abi-methods-bnbbalance-tokenbalance-address-deposittoken-address-uint256-withdrawbnb-address-uint256-and-withdrawtoken-address-address-uint256",
@@ -202,6 +209,118 @@
         "REQ-23"
       ],
       "version": 1
+    },
+    {
+      "id": "feature-fix-the-vault-bnb-balance-so-it-reliably-loads-and-is-visible-in-the-ui-balances-tab-and-the-bnb-balance-cards-shown-in-deposit-withdraw-tabs-including-in-read-only-mode-when-the-wallet-is-disconnected",
+      "title": "Fix the vault BNB balance so it reliably loads and is visible in the UI (Balances tab and the BNB balance cards shown in Deposit/Withdraw tabs), including in read-only mode when the wallet is disconnected.",
+      "reqIds": [
+        "REQ-24"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-revamp-the-dashboard-ui-to-look-like-a-polished-vault-dashboard-interface-using-an-orange-and-white-color-theme-and-apply-it-consistently-across-the-app-header-tabs-cards-forms-alerts-buttons-and-balance-displays",
+      "title": "Revamp the dashboard UI to look like a polished “vault dashboard” interface using an orange-and-white color theme, and apply it consistently across the app (Header, tabs, cards, forms, alerts, buttons, and balance displays).",
+      "reqIds": [
+        "REQ-25"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-fix-the-vault-bnb-balance-read-so-it-no-longer-fails-with-a-generic-0x-revert-error-and-can-still-display-a-correct-balance-even-when-the-contract-call-to-bnbbalance-fails",
+      "title": "Fix the vault BNB balance read so it no longer fails with a generic `0x`/revert error and can still display a correct balance even when the contract call to `bnbBalance()` fails.",
+      "reqIds": [
+        "REQ-26"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-a-reliable-read-only-method-in-the-web3-layer-to-fetch-the-native-bnb-balance-of-an-address-via-eth-getbalance-using-injected-provider-when-available-and-falling-back-to-the-existing-bsc-json-rpc-endpoint-when-provider-calls-fail",
+      "title": "Add a reliable, read-only method in the Web3 layer to fetch the native BNB balance of an address (via `eth_getBalance`), using injected provider when available and falling back to the existing BSC JSON-RPC endpoint when provider calls fail.",
+      "reqIds": [
+        "REQ-27"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-make-the-bnb-balance-and-watched-token-balances-update-live-by-implementing-an-automatic-refresh-mechanism-polling-and-displaying-a-last-updated-indicator-in-the-balances-ui",
+      "title": "Make the BNB balance and watched token balances update “live” by implementing an automatic refresh mechanism (polling) and displaying a last-updated indicator in the balances UI.",
+      "reqIds": [
+        "REQ-28"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-improve-error-messaging-for-bnb-balance-failures-so-the-bnb-balance-card-never-displays-a-confusing-raw-0x-error-instead-show-a-short-actionable-english-explanation-e-g-rpc-not-reachable-contract-call-reverted-and-preserve-the-most-recent-successful-balance-value",
+      "title": "Improve error messaging for BNB balance failures so the BNB balance card never displays a confusing raw `0x` error; instead, show a short, actionable English explanation (e.g., RPC not reachable, contract call reverted) and preserve the most recent successful balance value.",
+      "reqIds": [
+        "REQ-29"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-a-footer-credit-line-that-displays-the-exact-text-powered-by-jdtech-below-the-main-app-ui-styled-consistently-with-the-existing-footer-and-readable-on-mobile",
+      "title": "Add a footer credit line that displays the exact text \"powered by @JDtech\" below the main app UI, styled consistently with the existing footer and readable on mobile.",
+      "reqIds": [
+        "REQ-30"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-a-pre-react-boot-fallback-in-frontend-index-html-that-displays-a-user-friendly-loading-screen-and-if-the-app-bundle-fails-to-load-or-a-fatal-error-occurs-before-react-mounts-replaces-the-screen-with-a-clear-english-error-message-and-recovery-actions",
+      "title": "Add a pre-React boot fallback in `frontend/index.html` that displays a user-friendly loading screen and, if the app bundle fails to load or a fatal error occurs before React mounts, replaces the screen with a clear English error message and recovery actions.",
+      "reqIds": [
+        "REQ-31"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-capture-and-surface-boot-time-javascript-errors-that-occur-before-react-renders-by-adding-window-onerror-and-window-onunhandledrejection-handlers-in-frontend-index-html-that-update-the-fallback-ui-with-a-short-sanitized-english-error-summary-no-raw-stack-trace-by-default",
+      "title": "Capture and surface boot-time JavaScript errors that occur before React renders by adding `window.onerror` and `window.onunhandledrejection` handlers in `frontend/index.html` that update the fallback UI with a short, sanitized English error summary (no raw stack trace by default).",
+      "reqIds": [
+        "REQ-32"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-ensure-the-live-deployment-url-https-binance-smart-chain-vault-dashboard-caffeine-build-loads-the-app-shell-reliably-on-mobile-and-desktop-by-preventing-a-hard-blank-screen-even-in-failure-cases-and-by-keeping-all-user-facing-boot-error-text-in-english",
+      "title": "Ensure the live deployment URL `https://binance-smart-chain-vault-dashboard.caffeine.build/` loads the app shell reliably on mobile and desktop by preventing a hard blank screen even in failure cases and by keeping all user-facing boot error text in English.",
+      "reqIds": [
+        "REQ-33"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-create-a-fresh-redeployment-that-results-in-a-new-live-preview-url-different-from-https-binance-smart-chain-vault-dashboard-caffeine-build-and-verify-the-new-url-resolves-via-dns-and-loads-successfully-on-both-mobile-and-desktop",
+      "title": "Create a fresh redeployment that results in a new live preview URL (different from `https://binance-smart-chain-vault-dashboard.caffeine.build/`) and verify the new URL resolves via DNS and loads successfully on both mobile and desktop.",
+      "reqIds": [
+        "REQ-34"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-app-s-primary-branding-copy-to-remove-the-subtitle-professional-grade-asset-management-on-binance-smart-chain-and-replace-the-main-title-with-digital-asset-vault-ensure-the-header-brand-text-also-uses-digital-asset-vault-with-a-sensible-short-mobile-variant-if-needed",
+      "title": "Update the app’s primary branding copy to remove the subtitle “Professional-grade asset management on Binance Smart Chain” and replace the main title with “Digital Asset Vault”. Ensure the header brand text also uses “Digital Asset Vault” (with a sensible short/mobile variant if needed).",
+      "reqIds": [
+        "REQ-35"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-a-deposit-withdrawal-history-ui-that-shows-a-list-of-deposits-and-withdrawals-initiated-from-this-dapp-including-each-item-s-current-status-e-g-pending-confirmed-failed-and-key-details-type-token-bnb-amount-time-tx-hash-the-history-must-be-accessible-via-a-clearly-labeled-deposit-withdrawal-history-button-section-associated-with-the-deposit-and-withdraw-areas-so-users-can-check-the-status-after-submitting",
+      "title": "Add a Deposit/Withdrawal History UI that shows a list of deposits and withdrawals initiated from this dApp, including each item’s current status (e.g., Pending, Confirmed, Failed) and key details (type, token/BNB, amount, time, tx hash). The history must be accessible via a clearly labeled “Deposit & Withdrawal History” button/section associated with the Deposit and Withdraw areas (so users can check the status after submitting).",
+      "reqIds": [
+        "REQ-36"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-provide-basic-history-management-actions-in-the-deposit-withdrawal-history-ui-allow-users-to-clear-the-history-and-allow-users-to-open-each-transaction-in-a-block-explorer-bscscan-from-the-transaction-hash-link",
+      "title": "Provide basic history management actions in the Deposit/Withdrawal History UI: allow users to clear the history and allow users to open each transaction in a block explorer (BscScan) from the transaction hash link.",
+      "reqIds": [
+        "REQ-37"
+      ],
+      "version": 1
     }
   ],
   "new_feature_requests": [
@@ -244,6 +363,42 @@
     {
       "id": "AR-7",
       "summary": "Add broad wallet compatibility (e.g., WalletConnect) so the DApp can connect with wallets like SafePal, Trust Wallet, MetaMask, TokenPocket, etc.",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-8",
+      "summary": "Revamp the UI to look like a polished “vault dashboard” with an orange-and-white color theme (as previously suggested) optimized for mobile readability",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-9",
+      "summary": "Provide a “go live” / production deployment flow for the vault dashboard (publish to a live URL with clear steps to deploy/update)",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-10",
+      "summary": "Add a footer/credit line below the app UI: \"powered by @JDtech\"",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-11",
+      "summary": "Update UI styling/theme to look more professional (replace black-and-white look; make Deposit/Withdraw buttons and related UI elements look polished and professional)",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-12",
+      "summary": "Add deposit and withdrawal history display/state accessible via a Deposit/Withdrawal History button/section (show history status/details)",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-13",
+      "summary": "Change the main title/hero copy: remove \"Professional grade asset management on Binance Smart\" and replace with \"Digital Asset Vault\"",
       "reqIds": [],
       "status": "pending"
     }

@@ -3,12 +3,276 @@
     <head>
         <meta charset='UTF-8' />
         <meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes' />
-        <meta name='description' content='Binance Smart Chain Vault Dashboard - Manage your BEP20 tokens and BNB' />
+        <meta name='description' content='Digital Asset Vault - Secure management of your BEP20 tokens and BNB on Binance Smart Chain' />
         <meta name='theme-color' content='#000000' />
-        <title>BSC Vault Dashboard</title>
+        <meta name='build-id' content='redeploy-2026-02-13-v15' />
+        <title>Digital Asset Vault</title>
+        <style>
+            /* Boot fallback styles - inline to avoid external dependencies */
+            #boot-fallback {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: linear-gradient(135deg, #0a1628 0%, #1a2332 100%);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 9999;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+                color: #ffffff;
+                padding: 20px;
+            }
+            
+            #boot-fallback.hidden {
+                display: none;
+            }
+            
+            .boot-container {
+                max-width: 500px;
+                width: 100%;
+                text-align: center;
+            }
+            
+            .boot-icon {
+                width: 64px;
+                height: 64px;
+                margin: 0 auto 24px;
+                border-radius: 12px;
+                background: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 32px;
+            }
+            
+            .boot-spinner {
+                width: 48px;
+                height: 48px;
+                border: 4px solid rgba(14, 165, 233, 0.2);
+                border-top-color: #0ea5e9;
+                border-radius: 50%;
+                animation: spin 1s linear infinite;
+                margin: 0 auto 24px;
+            }
+            
+            @keyframes spin {
+                to { transform: rotate(360deg); }
+            }
+            
+            .boot-title {
+                font-size: 24px;
+                font-weight: 600;
+                margin-bottom: 12px;
+                color: #ffffff;
+            }
+            
+            .boot-message {
+                font-size: 16px;
+                line-height: 1.5;
+                color: #cccccc;
+                margin-bottom: 24px;
+            }
+            
+            .boot-error-details {
+                background: rgba(255, 0, 0, 0.1);
+                border: 1px solid rgba(255, 0, 0, 0.3);
+                border-radius: 8px;
+                padding: 16px;
+                margin-bottom: 24px;
+                text-align: left;
+                font-size: 14px;
+                color: #ffcccc;
+            }
+            
+            .boot-button {
+                display: inline-block;
+                padding: 12px 32px;
+                background: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%);
+                color: #ffffff;
+                border: none;
+                border-radius: 8px;
+                font-size: 16px;
+                font-weight: 600;
+                cursor: pointer;
+                text-decoration: none;
+                transition: transform 0.2s, box-shadow 0.2s;
+                min-height: 44px;
+                min-width: 44px;
+            }
+            
+            .boot-button:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(14, 165, 233, 0.4);
+            }
+            
+            .boot-button:active {
+                transform: translateY(0);
+            }
+            
+            .boot-guidance {
+                margin-top: 24px;
+                padding: 16px;
+                background: rgba(14, 165, 233, 0.1);
+                border: 1px solid rgba(14, 165, 233, 0.3);
+                border-radius: 8px;
+                font-size: 14px;
+                line-height: 1.6;
+                color: #99d6ea;
+            }
+            
+            .boot-guidance strong {
+                color: #0ea5e9;
+            }
+            
+            .boot-technical {
+                margin-top: 16px;
+                text-align: left;
+            }
+            
+            .boot-technical-toggle {
+                background: transparent;
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                color: #cccccc;
+                padding: 8px 16px;
+                border-radius: 6px;
+                font-size: 13px;
+                cursor: pointer;
+                transition: all 0.2s;
+            }
+            
+            .boot-technical-toggle:hover {
+                border-color: rgba(255, 255, 255, 0.4);
+                background: rgba(255, 255, 255, 0.05);
+            }
+            
+            .boot-technical-content {
+                display: none;
+                margin-top: 12px;
+                padding: 12px;
+                background: rgba(0, 0, 0, 0.3);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 6px;
+                font-size: 12px;
+                font-family: 'Courier New', monospace;
+                color: #aaaaaa;
+                text-align: left;
+                word-break: break-word;
+                max-height: 200px;
+                overflow-y: auto;
+            }
+            
+            .boot-technical-content.show {
+                display: block;
+            }
+        </style>
+        <script>
+            // Boot fallback system
+            (function() {
+                const BOOT_TIMEOUT = 15000;
+                const bootFallback = document.getElementById('boot-fallback');
+                const bootTitle = document.getElementById('boot-title');
+                const bootMessage = document.getElementById('boot-message');
+                const bootSpinner = document.getElementById('boot-spinner');
+                const bootErrorDetails = document.getElementById('boot-error-details');
+                const bootButton = document.getElementById('boot-button');
+                const bootGuidance = document.getElementById('boot-guidance');
+                const bootTechnical = document.getElementById('boot-technical');
+                const bootTechnicalToggle = document.getElementById('boot-technical-toggle');
+                const bootTechnicalContent = document.getElementById('boot-technical-content');
+
+                let bootTimer = setTimeout(() => {
+                    showBootError('Application failed to load within expected time', 'The app may be experiencing issues. Please try refreshing the page.');
+                }, BOOT_TIMEOUT);
+
+                window.addEventListener('load', () => {
+                    clearTimeout(bootTimer);
+                    setTimeout(() => {
+                        if (bootFallback) {
+                            bootFallback.classList.add('hidden');
+                        }
+                    }, 500);
+                });
+
+                window.addEventListener('error', (event) => {
+                    clearTimeout(bootTimer);
+                    showBootError('Application Error', event.message || 'An unexpected error occurred', event.error);
+                });
+
+                window.addEventListener('unhandledrejection', (event) => {
+                    clearTimeout(bootTimer);
+                    showBootError('Promise Rejection', event.reason?.message || 'An async operation failed', event.reason);
+                });
+
+                function showBootError(title, message, error) {
+                    if (!bootFallback) return;
+
+                    bootTitle.textContent = title;
+                    bootMessage.textContent = message;
+                    bootSpinner.style.display = 'none';
+                    bootErrorDetails.style.display = 'block';
+                    bootButton.style.display = 'inline-block';
+                    bootGuidance.style.display = 'block';
+                    bootTechnical.style.display = 'block';
+
+                    if (error) {
+                        bootTechnicalContent.textContent = error.stack || error.toString();
+                    }
+
+                    bootFallback.classList.remove('hidden');
+                }
+
+                if (bootTechnicalToggle && bootTechnicalContent) {
+                    bootTechnicalToggle.addEventListener('click', () => {
+                        bootTechnicalContent.classList.toggle('show');
+                        bootTechnicalToggle.textContent = bootTechnicalContent.classList.contains('show') 
+                            ? 'Hide Technical Details' 
+                            : 'Show Technical Details';
+                    });
+                }
+
+                if (bootButton) {
+                    bootButton.addEventListener('click', () => {
+                        window.location.reload();
+                    });
+                }
+            })();
+        </script>
     </head>
     <body>
+        <div id='boot-fallback'>
+            <div class='boot-container'>
+                <div class='boot-icon'>🛡️</div>
+                <div id='boot-spinner' class='boot-spinner'></div>
+                <h1 id='boot-title' class='boot-title'>Loading Digital Asset Vault</h1>
+                <p id='boot-message' class='boot-message'>Initializing secure vault interface...</p>
+                <div id='boot-error-details' class='boot-error-details' style='display: none;'>
+                    <strong>Error Details:</strong>
+                    <p>The application encountered an error during initialization.</p>
+                </div>
+                <button id='boot-button' class='boot-button' style='display: none;'>
+                    Reload Application
+                </button>
+                <div id='boot-guidance' class='boot-guidance' style='display: none;'>
+                    <p><strong>Troubleshooting:</strong></p>
+                    <ul style='text-align: left; margin: 8px 0; padding-left: 20px;'>
+                        <li>Check your internet connection</li>
+                        <li>Clear browser cache and cookies</li>
+                        <li>Try a different browser</li>
+                        <li>Disable browser extensions temporarily</li>
+                    </ul>
+                </div>
+                <div id='boot-technical' class='boot-technical' style='display: none;'>
+                    <button id='boot-technical-toggle' class='boot-technical-toggle'>
+                        Show Technical Details
+                    </button>
+                    <div id='boot-technical-content' class='boot-technical-content'></div>
+                </div>
+            </div>
+        </div>
         <div id='root'></div>
         <script type='module' src='/src/main.tsx'></script>
+        <!-- Force fresh deployment marker: v15-professional-blue-theme-2026-02-13 -->
     </body>
 </html>

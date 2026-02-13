@@ -1,7 +1,7 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-13T18:38:09.520Z",
+  "generatedAt": "2026-02-13T19:43:39.550Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
@@ -11,47 +11,54 @@
     "implemented": 3,
     "items": [
       {
-        "id": "REQ-21",
-        "summary": "Ensure the vault BNB balance is visible and updates correctly even when the user switches to the Deposit or Withdraw tabs (i.e., do not rely on the Balances tab being mounted for the BNB balance to be shown).",
+        "id": "REQ-35",
+        "summary": "Update the app’s primary branding copy to remove the subtitle “Professional-grade asset management on Binance Smart Chain” and replace the main title with “Digital Asset Vault”. Ensure the header brand text also uses “Digital Asset Vault” (with a sensible short/mobile variant if needed).",
         "status": "implemented",
         "plannedFiles": [
           "frontend/src/pages/Dashboard.tsx",
-          "frontend/src/hooks/useVaultBalances.ts",
-          "frontend/src/components/DepositForm.tsx",
-          "frontend/src/components/WithdrawForm.tsx",
-          "frontend/src/components/BalanceView.tsx"
+          "frontend/src/components/Header.tsx",
+          "frontend/index.html"
         ],
         "matchedFiles": [
           "frontend/src/pages/Dashboard.tsx",
+          "frontend/src/components/Header.tsx",
+          "frontend/index.html"
+        ]
+      },
+      {
+        "id": "REQ-36",
+        "summary": "Add a Deposit/Withdrawal History UI that shows a list of deposits and withdrawals initiated from this dApp, including each item’s current status (e.g., Pending, Confirmed, Failed) and key details (type, token/BNB, amount, time, tx hash). The history must be accessible via a clearly labeled “Deposit & Withdrawal History” button/section associated with the Deposit and Withdraw areas (so users can check the status after submitting).",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/hooks/useTxHistory.ts",
+          "frontend/src/components/TransactionHistory.tsx",
+          "frontend/src/hooks/useVaultOperations.ts",
           "frontend/src/components/DepositForm.tsx",
-          "frontend/src/components/WithdrawForm.tsx",
-          "frontend/src/components/BalanceView.tsx"
+          "frontend/src/components/WithdrawForm.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/hooks/useTxHistory.ts",
+          "frontend/src/components/TransactionHistory.tsx",
+          "frontend/src/hooks/useVaultOperations.ts",
+          "frontend/src/components/DepositForm.tsx",
+          "frontend/src/components/WithdrawForm.tsx"
         ]
       },
       {
-        "id": "REQ-22",
-        "summary": "Fix the Token Contract Address dropdown (token selector) styling so that when the dropdown is opened it does not visually overlap/blend with the Amount input; the dropdown must be fully opaque with proper layering and readable contrast.",
+        "id": "REQ-37",
+        "summary": "Provide basic history management actions in the Deposit/Withdrawal History UI: allow users to clear the history and allow users to open each transaction in a block explorer (BscScan) from the transaction hash link.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/components/TokenSelectorInput.tsx"
+          "frontend/src/hooks/useTxHistory.ts",
+          "frontend/src/components/TransactionHistory.tsx",
+          "frontend/src/components/DepositForm.tsx",
+          "frontend/src/components/WithdrawForm.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/components/TokenSelectorInput.tsx"
-        ]
-      },
-      {
-        "id": "REQ-23",
-        "summary": "Update wallet connectivity and UX copy to support and describe connecting via any injected EIP-1193 wallet provider (e.g., MetaMask, Trust Wallet, SafePal, TokenPocket) instead of MetaMask-only wording; connection logic must work with `window.ethereum` from these wallets’ in-app browsers/extension providers.",
-        "status": "implemented",
-        "plannedFiles": [
-          "frontend/src/hooks/useWeb3.tsx",
-          "frontend/src/components/WalletConnect.tsx",
-          "frontend/src/pages/Dashboard.tsx"
-        ],
-        "matchedFiles": [
-          "frontend/src/hooks/useWeb3.tsx",
-          "frontend/src/components/WalletConnect.tsx",
-          "frontend/src/pages/Dashboard.tsx"
+          "frontend/src/hooks/useTxHistory.ts",
+          "frontend/src/components/TransactionHistory.tsx",
+          "frontend/src/components/DepositForm.tsx",
+          "frontend/src/components/WithdrawForm.tsx"
         ]
       }
     ]
@@ -61,14 +68,16 @@
     "feature_evidence.json",
     "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
-    "frontend/src/components/BalanceView.tsx",
+    "frontend/index.html",
     "frontend/src/components/DepositForm.tsx",
-    "frontend/src/components/TokenSelectorInput.tsx",
-    "frontend/src/components/WalletConnect.tsx",
+    "frontend/src/components/Header.tsx",
+    "frontend/src/components/TransactionHistory.tsx",
     "frontend/src/components/WithdrawForm.tsx",
-    "frontend/src/global.d.ts",
-    "frontend/src/hooks/useWeb3.tsx",
+    "frontend/src/hooks/useTxHistory.ts",
+    "frontend/src/hooks/useVaultOperations.ts",
+    "frontend/src/index.css",
     "frontend/src/pages/Dashboard.tsx",
+    "frontend/tailwind.config.js",
     "project_state.json",
     "scratch/component-selection.json",
     "spec.md",

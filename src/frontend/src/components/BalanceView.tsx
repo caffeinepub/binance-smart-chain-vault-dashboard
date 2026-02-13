@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { RefreshCw, Plus, Coins, X, AlertCircle, TrendingUp, Info, Loader2 } from 'lucide-react';
+import { RefreshCw, Plus, Coins, X, AlertCircle, TrendingUp, Info, Loader2, Play, Pause } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,7 +19,19 @@ interface BalanceViewProps {
 
 export default function BalanceView({ vaultBalances }: BalanceViewProps) {
   const { isConnected, chainId } = useWeb3();
-  const { bnbBalance, bnbBalanceRaw, bnbError, tokenBalances, isLoading, refetch, error: fetchError } = vaultBalances;
+  const { 
+    bnbBalance, 
+    bnbBalanceRaw, 
+    bnbError, 
+    bnbFallbackUsed,
+    tokenBalances, 
+    isLoading, 
+    refetch, 
+    error: fetchError,
+    lastUpdated,
+    liveUpdatesEnabled,
+    setLiveUpdatesEnabled,
+  } = vaultBalances;
   const { tokens: watchedTokens, addToken, removeToken } = useWatchedTokens();
   const { setTokenLabel, removeTokenLabel, getTokenLabel } = useSavedTokenCatalog();
   const { bnbValuation, tokenValuations, isLoading: isLoadingPrices } = useBalanceValuations(
@@ -80,12 +92,36 @@ export default function BalanceView({ vaultBalances }: BalanceViewProps) {
     }
   };
 
+  const toggleLiveUpdates = () => {
+    setLiveUpdatesEnabled(!liveUpdatesEnabled);
+    toast.success(liveUpdatesEnabled ? 'Live updates paused' : 'Live updates enabled');
+  };
+
+  const formatLastUpdated = (date: Date | null): string => {
+    if (!date) return 'Never';
+    
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffSecs = Math.floor(diffMs / 1000);
+    
+    if (diffSecs < 10) return 'Just now';
+    if (diffSecs < 60) return `${diffSecs}s ago`;
+    
+    const diffMins = Math.floor(diffSecs / 60);
+    if (diffMins < 60) return `${diffMins}m ago`;
+    
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+    
+    return date.toLocaleString();
+  };
+
   return (
     <div className="space-y-6">
       {/* Read-only mode info */}
       {!isConnected && (
-        <Alert>
-          <Info className="h-4 w-4" />
+        <Alert className="border-primary/30 bg-primary/5">
+          <Info className="h-4 w-4 text-primary" />
           <AlertTitle>Read-Only Mode</AlertTitle>
           <AlertDescription>
             Viewing balances in read-only mode. Connect your wallet to deposit or withdraw tokens.
@@ -95,11 +131,11 @@ export default function BalanceView({ vaultBalances }: BalanceViewProps) {
 
       {/* Wrong network info */}
       {isConnected && isWrongNetwork && (
-        <Alert>
-          <Info className="h-4 w-4" />
-          <AlertTitle>Viewing Balances on Wrong Network</AlertTitle>
+        <Alert className="border-primary/30 bg-primary/5">
+          <Info className="h-4 w-4 text-primary" />
+          <AlertTitle>Wrong Network</AlertTitle>
           <AlertDescription>
-            You're viewing balances in read-only mode. Switch to BSC network to perform deposits or withdrawals.
+            Please switch to Binance Smart Chain (BSC) to interact with the vault.
           </AlertDescription>
         </Alert>
       )}
@@ -108,57 +144,103 @@ export default function BalanceView({ vaultBalances }: BalanceViewProps) {
       {fetchError && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Failed to Load Balances</AlertTitle>
+          <AlertTitle>Error Loading Balances</AlertTitle>
           <AlertDescription>{fetchError}</AlertDescription>
         </Alert>
       )}
 
+      {/* Controls: Refresh and Live Updates */}
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={handleRefresh}
+            disabled={isRefreshing || isLoading}
+            variant="outline"
+            size="sm"
+            className="min-h-[44px]"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          
+          <Button
+            onClick={toggleLiveUpdates}
+            variant={liveUpdatesEnabled ? "default" : "outline"}
+            size="sm"
+            className="min-h-[44px]"
+          >
+            {liveUpdatesEnabled ? (
+              <>
+                <Pause className="h-4 w-4 mr-2" />
+                Pause Updates
+              </>
+            ) : (
+              <>
+                <Play className="h-4 w-4 mr-2" />
+                Resume Updates
+              </>
+            )}
+          </Button>
+        </div>
+
+        <div className="text-sm text-muted-foreground flex items-center gap-2">
+          <span>Last updated:</span>
+          <Badge variant="outline" className="font-mono">
+            {formatLastUpdated(lastUpdated)}
+          </Badge>
+        </div>
+      </div>
+
       {/* BNB Balance Card */}
-      <Card className="border-2 border-chart-1/30 bg-gradient-to-br from-chart-1/5 to-transparent">
+      <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
         <CardHeader>
           <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <CardTitle className="flex items-center gap-2">
-                <Coins className="h-5 w-5 text-chart-1" />
-                BNB Balance
-              </CardTitle>
-              <CardDescription>Native BNB in vault</CardDescription>
+            <div className="flex items-center gap-2">
+              <Coins className="h-5 w-5 text-primary" />
+              <CardTitle>BNB Balance</CardTitle>
             </div>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={handleRefresh}
-              disabled={isLoading || isRefreshing}
-              className="rounded-full min-h-[44px] min-w-[44px]"
-            >
-              <RefreshCw className={`h-4 w-4 ${isLoading || isRefreshing ? 'animate-spin' : ''}`} />
-            </Button>
+            {isLoading && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
           </div>
+          <CardDescription>Native BNB held in vault</CardDescription>
         </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <Skeleton className="h-12 w-48" />
-          ) : bnbError ? (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{bnbError}</AlertDescription>
-            </Alert>
+        <CardContent className="space-y-3">
+          {isLoading && !bnbBalance ? (
+            <Skeleton className="h-12 w-full" />
           ) : (
-            <div className="space-y-2">
-              <p className="text-3xl md:text-4xl font-bold">{bnbBalance} BNB</p>
-              <p className="text-sm text-muted-foreground">Binance Coin</p>
-              {bnbValuation.usdValue && (
+            <>
+              <div className="text-3xl font-bold text-primary">
+                {bnbBalance} BNB
+              </div>
+              
+              {/* Valuation */}
+              {bnbValuation?.usdValue && (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <TrendingUp className="h-4 w-4" />
-                  <span>≈ ${bnbValuation.usdValue} USDT</span>
+                  <span>≈ ${bnbValuation.usdValue}</span>
+                  {isLoadingPrices && <Loader2 className="h-3 w-3 animate-spin" />}
                 </div>
               )}
-              {bnbValuation.error && !isLoadingPrices && (
-                <p className="text-xs text-muted-foreground">
-                  Price unavailable: {bnbValuation.error}
-                </p>
+
+              {/* Fallback notice */}
+              {bnbFallbackUsed && (
+                <Alert className="border-primary/30 bg-primary/5">
+                  <Info className="h-4 w-4 text-primary" />
+                  <AlertDescription className="text-xs">
+                    BNB balance shown from on-chain address balance fallback
+                  </AlertDescription>
+                </Alert>
               )}
-            </div>
+
+              {/* Error notice (but keep balance visible) */}
+              {bnbError && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription className="text-xs">
+                    {bnbError}
+                  </AlertDescription>
+                </Alert>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
@@ -167,65 +249,62 @@ export default function BalanceView({ vaultBalances }: BalanceViewProps) {
       <Card>
         <CardHeader>
           <CardTitle>Token Balances</CardTitle>
-          <CardDescription>BEP20 tokens in vault</CardDescription>
+          <CardDescription>BEP20 tokens held in vault</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {isLoading ? (
-            <div className="space-y-3">
+          {isLoading && tokenBalances.length === 0 ? (
+            <div className="space-y-2">
               <Skeleton className="h-16 w-full" />
               <Skeleton className="h-16 w-full" />
             </div>
           ) : tokenBalances.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              <p>No tokens being watched</p>
-              <p className="text-sm mt-2">Add token addresses below to track their balances</p>
+              <Coins className="h-12 w-12 mx-auto mb-2 opacity-50" />
+              <p>No tokens added yet</p>
+              <p className="text-sm">Add a token address below to start tracking</p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {tokenBalances.map((token) => {
-                const label = getTokenLabel(token.address);
-                const valuation = tokenValuations[token.address];
+                const valuation = tokenValuations.get(token.address);
                 
                 return (
                   <div
                     key={token.address}
                     className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/5 transition-colors"
                   >
-                    <div className="flex-1 min-w-0 space-y-1">
-                      <div className="flex items-center gap-2">
-                        <p className="font-semibold">{label}</p>
-                        <Badge variant="outline" className="text-xs">
-                          {token.symbol}
-                        </Badge>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-semibold">{token.symbol}</span>
+                        {token.error && (
+                          <Badge variant="destructive" className="text-xs">
+                            Error
+                          </Badge>
+                        )}
                       </div>
-                      <p className="text-sm font-mono text-muted-foreground truncate">
-                        {token.address}
-                      </p>
-                      {token.error ? (
-                        <Alert variant="destructive" className="mt-2">
-                          <AlertCircle className="h-3 w-3" />
-                          <AlertDescription className="text-xs">{token.error}</AlertDescription>
-                        </Alert>
-                      ) : (
-                        <>
-                          <p className="text-lg font-bold">{token.balance}</p>
-                          {valuation?.usdValue && (
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                              <TrendingUp className="h-3 w-3" />
-                              <span>≈ ${valuation.usdValue} USDT</span>
-                            </div>
+                      <div className="text-2xl font-bold text-primary">
+                        {token.balance}
+                      </div>
+                      
+                      {/* Token valuation */}
+                      {valuation && valuation.usdValue && (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                          <TrendingUp className="h-3 w-3" />
+                          <span>≈ ${valuation.usdValue}</span>
+                          {valuation.bnbValue && (
+                            <span className="text-xs">({valuation.bnbValue} BNB)</span>
                           )}
-                          {valuation?.bnbValue && (
-                            <p className="text-xs text-muted-foreground">
-                              ≈ {valuation.bnbValue} BNB
-                            </p>
-                          )}
-                          {valuation?.error && !isLoadingPrices && (
-                            <p className="text-xs text-muted-foreground">
-                              Price unavailable
-                            </p>
-                          )}
-                        </>
+                        </div>
+                      )}
+                      
+                      <div className="text-xs text-muted-foreground mt-1 truncate">
+                        {getTokenLabel(token.address) || token.address}
+                      </div>
+                      
+                      {token.error && (
+                        <div className="text-xs text-destructive mt-1">
+                          {token.error}
+                        </div>
                       )}
                     </div>
                     <Button
@@ -241,69 +320,62 @@ export default function BalanceView({ vaultBalances }: BalanceViewProps) {
               })}
             </div>
           )}
-        </CardContent>
-      </Card>
 
-      {/* Add Token Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Plus className="h-5 w-5" />
-            Add Token to Watch List
-          </CardTitle>
-          <CardDescription>
-            Track BEP20 token balances in the vault
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="tokenLabel">Token Label (Optional)</Label>
-            <Input
-              id="tokenLabel"
-              placeholder="e.g., USDT, BUSD, My Token"
-              value={newTokenLabel}
-              onChange={(e) => setNewTokenLabel(e.target.value)}
-              onKeyPress={handleKeyPress}
-              disabled={isAddingToken}
-            />
-            <p className="text-xs text-muted-foreground">
-              Give this token a friendly name for easy identification
-            </p>
+          {/* Add Token Form */}
+          <div className="pt-4 border-t space-y-3">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <Plus className="h-4 w-4" />
+              <span>Add Token to Watch List</span>
+            </div>
+            
+            <div className="space-y-2">
+              <div>
+                <Label htmlFor="token-address" className="text-xs">
+                  Token Contract Address
+                </Label>
+                <Input
+                  id="token-address"
+                  placeholder="0x..."
+                  value={newTokenAddress}
+                  onChange={(e) => setNewTokenAddress(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  className="font-mono text-sm"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="token-label" className="text-xs">
+                  Label (optional)
+                </Label>
+                <Input
+                  id="token-label"
+                  placeholder="e.g., USDT, BUSD, etc."
+                  value={newTokenLabel}
+                  onChange={(e) => setNewTokenLabel(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  className="text-sm"
+                />
+              </div>
+              
+              <Button
+                onClick={handleAddToken}
+                disabled={isAddingToken || !newTokenAddress.trim()}
+                className="w-full min-h-[44px]"
+              >
+                {isAddingToken ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Adding...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Token
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="tokenAddress">Token Contract Address</Label>
-            <Input
-              id="tokenAddress"
-              placeholder="0x..."
-              value={newTokenAddress}
-              onChange={(e) => setNewTokenAddress(e.target.value)}
-              onKeyPress={handleKeyPress}
-              className="font-mono text-sm"
-              disabled={isAddingToken}
-            />
-            <p className="text-xs text-muted-foreground">
-              Enter the BEP20 token contract address on BSC
-            </p>
-          </div>
-
-          <Button
-            onClick={handleAddToken}
-            disabled={isAddingToken || !newTokenAddress}
-            className="w-full min-h-[44px]"
-          >
-            {isAddingToken ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Adding...
-              </>
-            ) : (
-              <>
-                <Plus className="mr-2 h-4 w-4" />
-                Add Token
-              </>
-            )}
-          </Button>
         </CardContent>
       </Card>
     </div>

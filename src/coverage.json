@@ -1,7 +1,7 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-13T19:43:39.550Z",
+  "generatedAt": "2026-02-13T20:37:33.663Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
@@ -11,54 +11,40 @@
     "implemented": 3,
     "items": [
       {
-        "id": "REQ-35",
-        "summary": "Update the app’s primary branding copy to remove the subtitle “Professional-grade asset management on Binance Smart Chain” and replace the main title with “Digital Asset Vault”. Ensure the header brand text also uses “Digital Asset Vault” (with a sensible short/mobile variant if needed).",
+        "id": "REQ-1",
+        "summary": "Add a static, no-JavaScript reachability check page that can be loaded directly (e.g., `/health.html`) and displays the current build identifier (from the existing build ID metadata) so the user can distinguish DNS/hosting failures from in-app runtime failures.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/pages/Dashboard.tsx",
-          "frontend/src/components/Header.tsx",
-          "frontend/index.html"
+          "frontend/public/health.html"
         ],
         "matchedFiles": [
-          "frontend/src/pages/Dashboard.tsx",
-          "frontend/src/components/Header.tsx",
-          "frontend/index.html"
+          "frontend/public/health.html"
         ]
       },
       {
-        "id": "REQ-36",
-        "summary": "Add a Deposit/Withdrawal History UI that shows a list of deposits and withdrawals initiated from this dApp, including each item’s current status (e.g., Pending, Confirmed, Failed) and key details (type, token/BNB, amount, time, tx hash). The history must be accessible via a clearly labeled “Deposit & Withdrawal History” button/section associated with the Deposit and Withdraw areas (so users can check the status after submitting).",
+        "id": "REQ-2",
+        "summary": "Add a user-accessible “Performance check” section to the existing in-app diagnostics UI that reports basic page-load timing (e.g., time-to-app-mounted using the existing `app-mounted` signal, plus browser navigation timing when available) and includes a one-click copy-to-clipboard output for support/debugging.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/hooks/useTxHistory.ts",
-          "frontend/src/components/TransactionHistory.tsx",
-          "frontend/src/hooks/useVaultOperations.ts",
-          "frontend/src/components/DepositForm.tsx",
-          "frontend/src/components/WithdrawForm.tsx"
+          "frontend/index.html",
+          "frontend/src/lib/performanceCheck.ts",
+          "frontend/src/components/DiagnosticsBar.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/hooks/useTxHistory.ts",
-          "frontend/src/components/TransactionHistory.tsx",
-          "frontend/src/hooks/useVaultOperations.ts",
-          "frontend/src/components/DepositForm.tsx",
-          "frontend/src/components/WithdrawForm.tsx"
+          "frontend/index.html",
+          "frontend/src/lib/performanceCheck.ts",
+          "frontend/src/components/DiagnosticsBar.tsx"
         ]
       },
       {
-        "id": "REQ-37",
-        "summary": "Provide basic history management actions in the Deposit/Withdrawal History UI: allow users to clear the history and allow users to open each transaction in a block explorer (BscScan) from the transaction hash link.",
+        "id": "REQ-3",
+        "summary": "Ensure the boot fallback screen user-facing text remains clear and consistent for the three failure modes it already detects (resource/script load failure, network/connection issue, runtime error), and includes the build identifier in all non-success states so the user can report exactly what they saw.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/hooks/useTxHistory.ts",
-          "frontend/src/components/TransactionHistory.tsx",
-          "frontend/src/components/DepositForm.tsx",
-          "frontend/src/components/WithdrawForm.tsx"
+          "frontend/index.html"
         ],
         "matchedFiles": [
-          "frontend/src/hooks/useTxHistory.ts",
-          "frontend/src/components/TransactionHistory.tsx",
-          "frontend/src/components/DepositForm.tsx",
-          "frontend/src/components/WithdrawForm.tsx"
+          "frontend/index.html"
         ]
       }
     ]
@@ -69,15 +55,9 @@
     "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
     "frontend/index.html",
-    "frontend/src/components/DepositForm.tsx",
-    "frontend/src/components/Header.tsx",
-    "frontend/src/components/TransactionHistory.tsx",
-    "frontend/src/components/WithdrawForm.tsx",
-    "frontend/src/hooks/useTxHistory.ts",
-    "frontend/src/hooks/useVaultOperations.ts",
-    "frontend/src/index.css",
-    "frontend/src/pages/Dashboard.tsx",
-    "frontend/tailwind.config.js",
+    "frontend/public/health.html",
+    "frontend/src/components/DiagnosticsBar.tsx",
+    "frontend/src/lib/performanceCheck.ts",
     "project_state.json",
     "scratch/component-selection.json",
     "spec.md",

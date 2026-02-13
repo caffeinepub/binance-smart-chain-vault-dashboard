@@ -1,75 +1,76 @@
 {
   "kind": "build_request",
-  "title": "Update branding to “Digital Asset Vault” and add deposit/withdrawal transaction history with status",
-  "priority": "normal",
+  "title": "Stabilize deployment loading and add a simple reachability/performance self-check (rollback v14)",
+  "priority": "high",
   "requirements": [
     {
-      "id": "REQ-35",
-      "text": "Update the app’s primary branding copy to remove the subtitle “Professional-grade asset management on Binance Smart Chain” and replace the main title with “Digital Asset Vault”. Ensure the header brand text also uses “Digital Asset Vault” (with a sensible short/mobile variant if needed).",
+      "id": "REQ-1",
+      "text": "Add a static, no-JavaScript reachability check page that can be loaded directly (e.g., `/health.html`) and displays the current build identifier (from the existing build ID metadata) so the user can distinguish DNS/hosting failures from in-app runtime failures.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-6"
+          "msg-5",
+          "msg-7"
         ],
         "quotes": [
-          "Please remove title Professional grade asset management on Binance Smart and write Digital Asset Vault"
+          "Please check it properly its vaisting my time",
+          "yes"
         ]
       },
       "acceptanceCriteria": [
-        "On the Dashboard welcome section, the main title displays exactly “Digital Asset Vault”.",
-        "The subtitle text “Professional-grade asset management on Binance Smart Chain” is no longer shown anywhere in the welcome/hero area.",
-        "In the Header, the brand text displays “Digital Asset Vault” (and does not display “Vault Dashboard”).",
-        "All user-facing copy changes are in English and do not introduce new non-English strings."
+        "A new static asset is available at a stable path (e.g., `/health.html`) and loads without requiring the React app to boot.",
+        "The health page includes plain English text and shows the current build identifier (e.g., `rollback-v14-2026-02-13`).",
+        "If the main app URL fails to load but `/health.html` loads, the user can clearly tell it is an app boot issue rather than DNS/host resolution."
       ]
     },
     {
-      "id": "REQ-36",
-      "text": "Add a Deposit/Withdrawal History UI that shows a list of deposits and withdrawals initiated from this dApp, including each item’s current status (e.g., Pending, Confirmed, Failed) and key details (type, token/BNB, amount, time, tx hash). The history must be accessible via a clearly labeled “Deposit & Withdrawal History” button/section associated with the Deposit and Withdraw areas (so users can check the status after submitting).",
+      "id": "REQ-2",
+      "text": "Add a user-accessible “Performance check” section to the existing in-app diagnostics UI that reports basic page-load timing (e.g., time-to-app-mounted using the existing `app-mounted` signal, plus browser navigation timing when available) and includes a one-click copy-to-clipboard output for support/debugging.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-6"
+          "msg-5",
+          "msg-7"
         ],
         "quotes": [
-          "also show deposit and withdrawal history state in deposit /withdrawal history button"
+          "Please check it properly its vaisting my time",
+          "yes"
         ]
       },
       "acceptanceCriteria": [
-        "After a successful submission of a deposit or withdrawal transaction from this dApp, an entry is added to a local history list.",
-        "Each history entry shows: operation type (Deposit Token / Withdraw BNB / Withdraw Token), asset (BNB or token address/label if available), amount (as entered), timestamp, and transaction hash (shortened display is OK).",
-        "Each history entry displays a status that updates over time: Pending until confirmed, then Confirmed; if the transaction fails/reverts, status becomes Failed.",
-        "History is visible from the Deposit and Withdraw flows via a clearly labeled control such as “Deposit & Withdrawal History”.",
-        "History persists across page refreshes (e.g., stored locally in the browser)."
+        "After the app loads, the Diagnostics area shows a clearly labeled “Performance check” section in English.",
+        "The performance check displays at least: deployed build ID, timestamp, and a measured time from initial navigation to the `app-mounted` event (in ms or s).",
+        "There is a “Copy” action that copies the performance data to clipboard in a readable text block."
       ]
     },
     {
-      "id": "REQ-37",
-      "text": "Provide basic history management actions in the Deposit/Withdrawal History UI: allow users to clear the history and allow users to open each transaction in a block explorer (BscScan) from the transaction hash link.",
+      "id": "REQ-3",
+      "text": "Ensure the boot fallback screen user-facing text remains clear and consistent for the three failure modes it already detects (resource/script load failure, network/connection issue, runtime error), and includes the build identifier in all non-success states so the user can report exactly what they saw.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-6"
+          "msg-5",
+          "msg-7"
         ],
         "quotes": [
-          "show deposit and withdrawal history state in deposit /withdrawal history button"
+          "Please check it properly its vaisting my time",
+          "yes"
         ]
       },
       "acceptanceCriteria": [
-        "A “Clear History” action is available and removes all locally stored history entries after user confirmation (or an equivalent safe UX).",
-        "Each history item includes a link that opens the transaction on BscScan in a new tab/window.",
-        "Clearing history does not affect balances, watched tokens, or saved token catalog state."
+        "When the app is still loading, times out, or fails due to a resource/network/runtime error, the boot fallback UI includes the build identifier visibly.",
+        "The fallback messages are in plain English and do not require the user to open developer tools to identify the error category and build ID.",
+        "On successful load, the boot fallback hides as it does now (triggered by `app-mounted` or root mutation)."
       ]
     }
   ],
   "constraints": [
-    "Do not edit files under frontend/src/components/ui (Shadcn components are read-only).",
-    "Do not edit immutable paths listed in SYSTEM_CONTEXT (compose them instead).",
-    "Keep all user-facing text in English."
+    "Frontend files under `frontend/src/hooks/useInternetIdentity.ts`, `frontend/src/hooks/useInternetIdentity.tsx`, `frontend/src/hooks/useActor.ts`, `frontend/src/main.tsx`, and `frontend/src/components/ui` are immutable and must not be modified.",
+    "Do not introduce additional backend services or external databases; keep changes within the existing single-frontend deployment model."
   ],
   "nonGoals": [
-    "Do not implement a full on-chain indexed history for all vault activity; only track and display transactions initiated from this dApp (stored locally).",
-    "Do not add new backend persistence for history (no Motoko canister storage required for this feature unless explicitly requested later).",
-    "Do not add real-time WebSocket-based updates for transaction status."
+    "Do not add new vault features (deposit/withdraw logic, token watchlist behavior, pricing, etc.) beyond diagnostics/reachability checks.",
+    "Do not implement third-party monitoring, analytics, or external logging services."
   ],
   "imageRequirements": {
     "required": [],

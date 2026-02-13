@@ -1,12 +1,12 @@
 /**
  * Build information helper
- * Provides a build identifier for deployment verification
+ * Provides build identifier and version for deployment verification
  */
 
 export const BUILD_INFO = {
   version: 'v14',
   date: '2026-02-13',
-  identifier: 'redeploy-2026-02-13-v14',
+  identifier: 'rollback-v14-2026-02-13',
 } as const;
 
 export function getBuildIdentifier(): string {
@@ -19,4 +19,17 @@ export function getBuildVersion(): string {
 
 export function getBuildDate(): string {
   return BUILD_INFO.date;
+}
+
+/**
+ * Get the deployed build ID from the meta tag, with fallback to static identifier
+ */
+export function getDeployedBuildId(): string {
+  if (typeof document !== 'undefined') {
+    const buildIdMeta = document.querySelector('meta[name="build-id"]');
+    if (buildIdMeta) {
+      return buildIdMeta.getAttribute('content') || BUILD_INFO.identifier;
+    }
+  }
+  return BUILD_INFO.identifier;
 }

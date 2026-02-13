@@ -2,12 +2,30 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-update-the-app-s-primary-branding-copy-to-remove-the-subtitle-professional-grade-asset-management-on-binance-smart-chain-and-replace-the-main-title-with-digital-asset-vault-ensure-the-header-brand-text-also-uses-digital-asset-vault-with-a-sensible-short-mobile-variant-if-needed",
-      "featureTitle": "Update the app’s primary branding copy to remove the subtitle “Professional-grade asset management on Binance Smart Chain” and replace the main title with “Digital Asset Vault”. Ensure the header brand text also uses “Digital Asset Vault” (with a sensible short/mobile variant if needed).",
+      "featureId": "feature-add-a-static-no-javascript-reachability-check-page-that-can-be-loaded-directly-e-g-health-html-and-displays-the-current-build-identifier-from-the-existing-build-id-metadata-so-the-user-can-distinguish-dns-hosting-failures-from-in-app-runtime-failures",
+      "featureTitle": "Add a static, no-JavaScript reachability check page that can be loaded directly (e.g., `/health.html`) and displays the current build identifier (from the existing build ID metadata) so the user can distinguish DNS/hosting failures from in-app runtime failures.",
+      "files": [
+        "frontend/public/health.html"
+      ],
+      "components": [
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-1"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-add-a-user-accessible-performance-check-section-to-the-existing-in-app-diagnostics-ui-that-reports-basic-page-load-timing-e-g-time-to-app-mounted-using-the-existing-app-mounted-signal-plus-browser-navigation-timing-when-available-and-includes-a-one-click-copy-to-clipboard-output-for-support-debugging",
+      "featureTitle": "Add a user-accessible “Performance check” section to the existing in-app diagnostics UI that reports basic page-load timing (e.g., time-to-app-mounted using the existing `app-mounted` signal, plus browser navigation timing when available) and includes a one-click copy-to-clipboard output for support/debugging.",
       "files": [
         "frontend/index.html",
-        "frontend/src/components/Header.tsx",
-        "frontend/src/pages/Dashboard.tsx"
+        "frontend/src/components/DiagnosticsBar.tsx",
+        "frontend/src/lib/performanceCheck.ts"
       ],
       "components": [
         "core-infrastructure@1.0.2",
@@ -17,19 +35,15 @@
         "github-export-icp-cli@1.0.0"
       ],
       "testIds": [
-        "REQ-35"
+        "REQ-2"
       ],
       "confidence": "high"
     },
     {
-      "featureId": "feature-add-a-deposit-withdrawal-history-ui-that-shows-a-list-of-deposits-and-withdrawals-initiated-from-this-dapp-including-each-item-s-current-status-e-g-pending-confirmed-failed-and-key-details-type-token-bnb-amount-time-tx-hash-the-history-must-be-accessible-via-a-clearly-labeled-deposit-withdrawal-history-button-section-associated-with-the-deposit-and-withdraw-areas-so-users-can-check-the-status-after-submitting",
-      "featureTitle": "Add a Deposit/Withdrawal History UI that shows a list of deposits and withdrawals initiated from this dApp, including each item’s current status (e.g., Pending, Confirmed, Failed) and key details (type, token/BNB, amount, time, tx hash). The history must be accessible via a clearly labeled “Deposit & Withdrawal History” button/section associated with the Deposit and Withdraw areas (so users can check the status after submitting).",
+      "featureId": "feature-ensure-the-boot-fallback-screen-user-facing-text-remains-clear-and-consistent-for-the-three-failure-modes-it-already-detects-resource-script-load-failure-network-connection-issue-runtime-error-and-includes-the-build-identifier-in-all-non-success-states-so-the-user-can-report-exactly-what-they-saw",
+      "featureTitle": "Ensure the boot fallback screen user-facing text remains clear and consistent for the three failure modes it already detects (resource/script load failure, network/connection issue, runtime error), and includes the build identifier in all non-success states so the user can report exactly what they saw.",
       "files": [
-        "frontend/src/components/DepositForm.tsx",
-        "frontend/src/components/TransactionHistory.tsx",
-        "frontend/src/components/WithdrawForm.tsx",
-        "frontend/src/hooks/useTxHistory.ts",
-        "frontend/src/hooks/useVaultOperations.ts"
+        "frontend/index.html"
       ],
       "components": [
         "core-infrastructure@1.0.2",
@@ -39,28 +53,7 @@
         "github-export-icp-cli@1.0.0"
       ],
       "testIds": [
-        "REQ-36"
-      ],
-      "confidence": "high"
-    },
-    {
-      "featureId": "feature-provide-basic-history-management-actions-in-the-deposit-withdrawal-history-ui-allow-users-to-clear-the-history-and-allow-users-to-open-each-transaction-in-a-block-explorer-bscscan-from-the-transaction-hash-link",
-      "featureTitle": "Provide basic history management actions in the Deposit/Withdrawal History UI: allow users to clear the history and allow users to open each transaction in a block explorer (BscScan) from the transaction hash link.",
-      "files": [
-        "frontend/src/components/DepositForm.tsx",
-        "frontend/src/components/TransactionHistory.tsx",
-        "frontend/src/components/WithdrawForm.tsx",
-        "frontend/src/hooks/useTxHistory.ts"
-      ],
-      "components": [
-        "core-infrastructure@1.0.2",
-        "shadcn-ui@1.0.0",
-        "build-template-react@1.0.0",
-        "initial-app@1.0.0",
-        "github-export-icp-cli@1.0.0"
-      ],
-      "testIds": [
-        "REQ-37"
+        "REQ-3"
       ],
       "confidence": "high"
     }

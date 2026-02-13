@@ -5,7 +5,7 @@
         <meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes' />
         <meta name='description' content='Digital Asset Vault - Secure management of your BEP20 tokens and BNB on Binance Smart Chain' />
         <meta name='theme-color' content='#000000' />
-        <meta name='build-id' content='redeploy-2026-02-13-v15' />
+        <meta name='build-id' content='rollback-v14-2026-02-13' />
         <title>Digital Asset Vault</title>
         <style>
             /* Boot fallback styles - inline to avoid external dependencies */
@@ -73,6 +73,14 @@
                 line-height: 1.5;
                 color: #cccccc;
                 margin-bottom: 24px;
+            }
+            
+            .boot-build-id {
+                font-size: 13px;
+                opacity: 0.8;
+                margin-top: 8px;
+                display: inline-block;
+                color: #99d6ea;
             }
             
             .boot-error-details {
@@ -168,55 +176,188 @@
             }
         </style>
         <script>
-            // Boot fallback system
+            // Boot fallback system with performance measurement
             (function() {
-                const BOOT_TIMEOUT = 15000;
+                const BOOT_TIMEOUT = 20000; // 20 seconds
+                const STILL_LOADING_THRESHOLD = 3000; // 3 seconds
                 const bootFallback = document.getElementById('boot-fallback');
                 const bootTitle = document.getElementById('boot-title');
                 const bootMessage = document.getElementById('boot-message');
                 const bootSpinner = document.getElementById('boot-spinner');
-                const bootErrorDetails = document.getElementById('boot-error-details');
                 const bootButton = document.getElementById('boot-button');
                 const bootGuidance = document.getElementById('boot-guidance');
                 const bootTechnical = document.getElementById('boot-technical');
                 const bootTechnicalToggle = document.getElementById('boot-technical-toggle');
                 const bootTechnicalContent = document.getElementById('boot-technical-content');
 
-                let bootTimer = setTimeout(() => {
-                    showBootError('Application failed to load within expected time', 'The app may be experiencing issues. Please try refreshing the page.');
+                let appMounted = false;
+                let stillLoadingTimer = null;
+                let bootTimer = null;
+                let scriptLoadFailed = false;
+                
+                // Get build ID from meta tag
+                const buildIdMeta = document.querySelector('meta[name="build-id"]');
+                const buildId = buildIdMeta ? buildIdMeta.getAttribute('content') : 'unknown';
+                
+                // Record navigation start time for performance measurement
+                const navigationStartTime = performance.now();
+
+                // Show build ID immediately in loading state
+                if (bootMessage) {
+                    bootMessage.innerHTML = 'Initializing secure vault interface...<br><span class="boot-build-id">Build: ' + buildId + '</span>';
+                }
+
+                // Show "Still loading..." message after threshold
+                stillLoadingTimer = setTimeout(() => {
+                    if (!appMounted && bootMessage) {
+                        bootMessage.innerHTML = 'Still loading... This may take a moment on first visit.<br><span class="boot-build-id">Build: ' + buildId + '</span>';
+                    }
+                }, STILL_LOADING_THRESHOLD);
+
+                // Show timeout error after full timeout
+                bootTimer = setTimeout(() => {
+                    if (!appMounted && !scriptLoadFailed) {
+                        showBootError(
+                            'Loading Timeout',
+                            'The app is taking longer than expected to load. This could be due to a slow connection or a script loading issue.',
+                            null,
+                            'timeout'
+                        );
+                    }
                 }, BOOT_TIMEOUT);
 
-                window.addEventListener('load', () => {
-                    clearTimeout(bootTimer);
-                    setTimeout(() => {
-                        if (bootFallback) {
-                            bootFallback.classList.add('hidden');
-                        }
-                    }, 500);
+                // Listen for app mounted signal from React
+                window.addEventListener('app-mounted', () => {
+                    if (!appMounted) {
+                        appMounted = true;
+                        const appMountedTime = performance.now() - navigationStartTime;
+                        
+                        // Store performance measurement in window scope for React to read
+                        window.__appMountedTime = appMountedTime;
+                        
+                        clearTimeout(stillLoadingTimer);
+                        clearTimeout(bootTimer);
+                        setTimeout(() => {
+                            if (bootFallback) {
+                                bootFallback.classList.add('hidden');
+                            }
+                        }, 100);
+                    }
                 });
 
+                // Detect when React mounts content to #root (fallback)
+                const rootObserver = new MutationObserver((mutations) => {
+                    const root = document.getElementById('root');
+                    if (root && root.children.length > 0 && !appMounted) {
+                        appMounted = true;
+                        const appMountedTime = performance.now() - navigationStartTime;
+                        window.__appMountedTime = appMountedTime;
+                        
+                        clearTimeout(stillLoadingTimer);
+                        clearTimeout(bootTimer);
+                        setTimeout(() => {
+                            if (bootFallback) {
+                                bootFallback.classList.add('hidden');
+                            }
+                        }, 300);
+                        rootObserver.disconnect();
+                    }
+                });
+
+                const root = document.getElementById('root');
+                if (root) {
+                    rootObserver.observe(root, { childList: true, subtree: true });
+                }
+
+                // Network status monitoring
+                let isOnline = navigator.onLine;
+                window.addEventListener('online', () => { isOnline = true; });
+                window.addEventListener('offline', () => { isOnline = false; });
+
+                // Handle script load errors (resource not found)
                 window.addEventListener('error', (event) => {
-                    clearTimeout(bootTimer);
-                    showBootError('Application Error', event.message || 'An unexpected error occurred', event.error);
+                    if (!appMounted) {
+                        // Check if this is a script load error
+                        if (event.target && (event.target.tagName === 'SCRIPT' || event.target.tagName === 'LINK')) {
+                            scriptLoadFailed = true;
+                            clearTimeout(stillLoadingTimer);
+                            clearTimeout(bootTimer);
+                            
+                            const resourceType = event.target.tagName === 'SCRIPT' ? 'JavaScript bundle' : 'stylesheet';
+                            const resourceUrl = event.target.src || event.target.href || 'unknown';
+                            
+                            showBootError(
+                                'Resource Not Found',
+                                'Failed to load ' + resourceType + '. The application files could not be found. This may be a deployment issue.',
+                                { message: 'Failed to load: ' + resourceUrl, stack: 'Resource URL: ' + resourceUrl },
+                                'resource-not-found'
+                            );
+                            return;
+                        }
+                        
+                        // Other runtime errors
+                        clearTimeout(stillLoadingTimer);
+                        clearTimeout(bootTimer);
+                        
+                        let sanitizedMessage = 'An error occurred while loading the app.';
+                        if (event.message) {
+                            if (event.message.includes('Failed to fetch') || event.message.includes('NetworkError')) {
+                                sanitizedMessage = 'Network error: Unable to load application resources. Please check your internet connection.';
+                            } else if (event.message.includes('404') || event.message.includes('Not Found')) {
+                                sanitizedMessage = 'Resource not found: The application files could not be loaded. Please try refreshing.';
+                            } else if (event.filename && event.filename.includes('.js')) {
+                                sanitizedMessage = 'Script error: Unable to execute application code. Please try refreshing.';
+                            } else {
+                                sanitizedMessage = 'Script error: ' + event.message.substring(0, 100);
+                            }
+                        }
+                        
+                        showBootError('Application Error', sanitizedMessage, event.error, 'runtime-error');
+                    }
                 });
 
                 window.addEventListener('unhandledrejection', (event) => {
-                    clearTimeout(bootTimer);
-                    showBootError('Promise Rejection', event.reason?.message || 'An async operation failed', event.reason);
+                    if (!appMounted) {
+                        clearTimeout(stillLoadingTimer);
+                        clearTimeout(bootTimer);
+                        
+                        let sanitizedMessage = 'An error occurred while loading the app.';
+                        if (event.reason?.message) {
+                            sanitizedMessage = event.reason.message.substring(0, 150);
+                        }
+                        
+                        showBootError('Loading Failed', sanitizedMessage, event.reason, 'promise-rejection');
+                    }
                 });
 
-                function showBootError(title, message, error) {
+                function showBootError(title, message, error, errorType) {
                     if (!bootFallback) return;
 
+                    // Classify error type for better diagnostics
+                    let errorCategory = 'Unknown Error';
+                    if (errorType === 'resource-not-found') {
+                        errorCategory = '(a) Resource/Script Load Failure';
+                    } else if (errorType === 'timeout' || !isOnline) {
+                        errorCategory = '(b) Network/Connection Issue';
+                    } else if (errorType === 'runtime-error' || errorType === 'promise-rejection') {
+                        errorCategory = '(c) Runtime Error';
+                    }
+
                     bootTitle.textContent = title;
-                    bootMessage.textContent = message;
+                    bootMessage.innerHTML = '<strong>' + errorCategory + '</strong><br>' + 
+                        message + 
+                        '<br><span class="boot-build-id">Build ID: ' + buildId + '</span>';
+                    
+                    if (!isOnline) {
+                        bootMessage.innerHTML += '<br><br><span style="color: #ff6b6b; font-weight: 600;">⚠️ You appear to be offline</span>';
+                    }
+                    
                     bootSpinner.style.display = 'none';
-                    bootErrorDetails.style.display = 'block';
                     bootButton.style.display = 'inline-block';
                     bootGuidance.style.display = 'block';
-                    bootTechnical.style.display = 'block';
+                    bootTechnical.style.display = error ? 'block' : 'none';
 
-                    if (error) {
+                    if (error && bootTechnicalContent) {
                         bootTechnicalContent.textContent = error.stack || error.toString();
                     }
 
@@ -247,10 +388,6 @@
                 <div id='boot-spinner' class='boot-spinner'></div>
                 <h1 id='boot-title' class='boot-title'>Loading Digital Asset Vault</h1>
                 <p id='boot-message' class='boot-message'>Initializing secure vault interface...</p>
-                <div id='boot-error-details' class='boot-error-details' style='display: none;'>
-                    <strong>Error Details:</strong>
-                    <p>The application encountered an error during initialization.</p>
-                </div>
                 <button id='boot-button' class='boot-button' style='display: none;'>
                     Reload Application
                 </button>
@@ -261,6 +398,7 @@
                         <li>Clear browser cache and cookies</li>
                         <li>Try a different browser</li>
                         <li>Disable browser extensions temporarily</li>
+                        <li>If the issue persists, use "Copy diagnostics" after the app loads</li>
                     </ul>
                 </div>
                 <div id='boot-technical' class='boot-technical' style='display: none;'>
@@ -273,6 +411,5 @@
         </div>
         <div id='root'></div>
         <script type='module' src='/src/main.tsx'></script>
-        <!-- Force fresh deployment marker: v15-professional-blue-theme-2026-02-13 -->
     </body>
 </html>

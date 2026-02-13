@@ -1,54 +1,58 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-02-13T19:43:39.545Z",
-  "summary": "Branding appears updated to “Digital Asset Vault” in the Dashboard hero and Header. A local, persistent Deposit/Withdrawal History feature was added via a new TransactionHistory component and useTxHistory hook, with add-entry integration in deposit/withdraw flows and status polling. Some additional UI/theme/metadata changes were also introduced that were not requested.",
-  "missing_requirements": [],
+  "generatedAt": "2026-02-13T20:37:33.660Z",
+  "summary": "REQ-2 appears partially implemented via a new performanceCheck utility and new copy-to-clipboard logic in DiagnosticsBar, but the diff excerpt does not show the required in-UI “Performance check” section text/fields. REQ-1 adds /health.html, but the provided truncation does not show it displaying the build identifier from build metadata. REQ-3 shows boot-fallback styling and a build-id meta tag, but the diff excerpt does not show the boot fallback messages for the three failure modes nor confirms the build identifier is rendered in all non-success states.",
+  "missing_requirements": [
+    {
+      "id": "REQ-1",
+      "requirement": "Health check page (/health.html) must display the current build identifier from existing build ID metadata, in plain English, and load without React/JS boot.",
+      "reason": "A static asset was added at frontend/public/health.html, but the truncated content shown contains only HTML/CSS; there is no evidence in the excerpt that the build identifier is actually displayed on the page (or how it is sourced from build metadata) and no visible plain-English guidance text confirming the intent.",
+      "evidence": [
+        "frontend/public/health.html (truncated; no build-id visible in excerpt)"
+      ]
+    },
+    {
+      "id": "REQ-2",
+      "requirement": "Add a user-accessible “Performance check” section in the existing in-app diagnostics UI showing build ID, timestamp, and time from navigation to the app-mounted event, with a one-click Copy action.",
+      "reason": "The diff shows performance data collection/formatting and a copyPerformanceCheck handler, but the DiagnosticsBar UI portion that would render a clearly labeled “Performance check” section (and display build ID/timestamp/time-to-mounted) is truncated and not evidenced.",
+      "evidence": [
+        "frontend/src/lib/performanceCheck.ts",
+        "frontend/src/components/DiagnosticsBar.tsx (truncated before showing any Performance check section UI)"
+      ]
+    },
+    {
+      "id": "REQ-3",
+      "requirement": "Boot fallback screen text remains clear/consistent for the three existing failure modes (resource/script load failure, network/connection issue, runtime error) and includes the build identifier in all non-success states.",
+      "reason": "frontend/index.html includes boot-fallback styling and a .boot-build-id style plus a build-id meta tag, but the excerpt does not show the actual boot fallback message logic/text for the three failure modes, nor explicit evidence that build ID is rendered in every non-success state (loading/timeout/resource/network/runtime).",
+      "evidence": [
+        "frontend/index.html (truncated; styles shown but not the full boot-fallback markup/script that would set messages and render build ID)"
+      ]
+    }
+  ],
   "hallucinated_features": [
     {
-      "description": "Global visual/theme overhaul (new professional blue/teal palette, additional CSS variables, gradients, and styling changes) beyond the requested branding copy update.",
-      "reason": "BuildRequest only asked to update branding text and add transaction history; it did not request a theme redesign.",
+      "description": "Introduced/modified repository metadata tracking feature requests (project_state.json) unrelated to the runtime deliverables.",
+      "reason": "BuildRequest did not ask to add or modify project_state.json; this appears to be internal tracking rather than an app feature required by REQ-1/2/3.",
       "evidence": [
-        "frontend/src/index.css",
-        "frontend/src/pages/Dashboard.tsx",
-        "frontend/src/components/Header.tsx"
+        "project_state.json"
       ]
     },
     {
-      "description": "Added/changed extensive boot fallback and additional meta tags (e.g., build-id) in index.html beyond updating the app title/branding.",
-      "reason": "BuildRequest did not request boot fallback UI changes or deployment verification metadata.",
-      "evidence": [
-        "frontend/index.html"
-      ]
-    },
-    {
-      "description": "Added/changed behavior described as wallet-agnostic messaging, enhanced error extraction, read-only JSON-RPC fallback, and balance fallback strategy (per file summaries).",
-      "reason": "BuildRequest scope was branding copy + local transaction history UI; these broader Web3/balance UX enhancements were not requested.",
-      "evidence": [
-        "frontend-file-summaries.txt"
-      ]
-    },
-    {
-      "description": "Footer changes including attribution, UTM tracking params, build version display (per file summaries).",
-      "reason": "BuildRequest did not mention Footer attribution/tracking/build version display.",
+      "description": "Updated a documentation/summary file describing many vault/UI features (including deposit/withdraw, token watchlist behavior, etc.).",
+      "reason": "BuildRequest explicitly states non-goals of adding new vault features beyond diagnostics/reachability; while this file is not necessarily functional code, its modification is not requested as part of REQ-1/2/3.",
       "evidence": [
         "frontend-file-summaries.txt"
       ]
     }
   ],
-  "confidence": 0.64,
+  "confidence": 0.58,
   "changed_files": [
     "frontend-file-summaries.txt",
     "frontend/index.html",
-    "frontend/src/components/DepositForm.tsx",
-    "frontend/src/components/Header.tsx",
-    "frontend/src/components/TransactionHistory.tsx",
-    "frontend/src/components/WithdrawForm.tsx",
-    "frontend/src/hooks/useTxHistory.ts",
-    "frontend/src/hooks/useVaultOperations.ts",
-    "frontend/src/index.css",
-    "frontend/src/pages/Dashboard.tsx",
-    "frontend/tailwind.config.js",
+    "frontend/public/health.html",
+    "frontend/src/components/DiagnosticsBar.tsx",
+    "frontend/src/lib/performanceCheck.ts",
     "project_state.json"
   ]
 }

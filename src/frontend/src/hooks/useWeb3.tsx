@@ -30,7 +30,8 @@ export function Web3Provider({ children }: { children: ReactNode }) {
   const [hasMetaMask, setHasMetaMask] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
-  const isConnected = !!account && chainId === BSC_CHAIN_ID;
+  // V14: Connected if wallet is connected, regardless of chain
+  const isConnected = !!account;
 
   // Detect mobile device
   useEffect(() => {
@@ -94,13 +95,6 @@ export function Web3Provider({ children }: { children: ReactNode }) {
         return;
       }
 
-      const currentChainId = await window.ethereum.request({ method: 'eth_chainId' });
-      const chainIdNum = parseInt(currentChainId, 16);
-
-      if (chainIdNum !== BSC_CHAIN_ID) {
-        await switchToBSC();
-      }
-
       const accounts = await window.ethereum.request({
         method: 'eth_requestAccounts',
       });
@@ -111,7 +105,10 @@ export function Web3Provider({ children }: { children: ReactNode }) {
       }
 
       setAccount(accounts[0]);
-      setChainId(BSC_CHAIN_ID);
+      
+      const currentChainId = await window.ethereum.request({ method: 'eth_chainId' });
+      const chainIdNum = parseInt(currentChainId, 16);
+      setChainId(chainIdNum);
     } catch (err: any) {
       console.error('Error connecting wallet:', err);
       setError(err.message || 'Failed to connect wallet');

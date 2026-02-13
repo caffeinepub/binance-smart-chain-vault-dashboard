@@ -1,383 +1,274 @@
 import { useState } from 'react';
-import { RefreshCw, Plus, Coins, X, AlertCircle, TrendingUp, Info, Loader2, Play, Pause } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { RefreshCw, Plus, Coins, X, AlertCircle, TrendingUp, Pause, Play, Database } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { useWatchedTokens } from '@/hooks/useWatchedTokens';
-import { useSavedTokenCatalog } from '@/hooks/useSavedTokenCatalog';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Separator } from '@/components/ui/separator';
 import { useBalanceValuations } from '@/hooks/useBalanceValuations';
-import { useWeb3 } from '@/hooks/useWeb3';
 import { toast } from 'sonner';
 
-interface BalanceViewProps {
-  vaultBalances: ReturnType<typeof import('@/hooks/useVaultBalances').useVaultBalances>;
+interface TokenBalance {
+  address: string;
+  balance: string;
+  balanceRaw: bigint;
+  symbol: string;
+  decimals: number;
+  error?: string;
 }
 
-export default function BalanceView({ vaultBalances }: BalanceViewProps) {
-  const { isConnected, chainId } = useWeb3();
-  const { 
-    bnbBalance, 
-    bnbBalanceRaw, 
-    bnbError, 
-    bnbFallbackUsed,
-    tokenBalances, 
-    isLoading, 
-    refetch, 
-    error: fetchError,
-    lastUpdated,
-    liveUpdatesEnabled,
-    setLiveUpdatesEnabled,
-  } = vaultBalances;
-  const { tokens: watchedTokens, addToken, removeToken } = useWatchedTokens();
-  const { setTokenLabel, removeTokenLabel, getTokenLabel } = useSavedTokenCatalog();
+interface BalanceViewProps {
+  bnbBalance: string;
+  bnbBalanceRaw: bigint;
+  bnbError: string | null;
+  bnbFallbackUsed: boolean;
+  tokenBalances: TokenBalance[];
+  isLoading: boolean;
+  isRefreshing: boolean;
+  error: string | null;
+  onRefresh: () => Promise<void>;
+  lastUpdated: Date | null;
+  liveUpdatesEnabled: boolean;
+  onToggleLiveUpdates: (enabled: boolean) => void;
+  onClearMetadataCache?: () => void;
+  metadataCacheSize?: number;
+}
+
+export function BalanceView({
+  bnbBalance,
+  bnbBalanceRaw,
+  bnbError,
+  bnbFallbackUsed,
+  tokenBalances,
+  isLoading,
+  isRefreshing,
+  error,
+  onRefresh,
+  lastUpdated,
+  liveUpdatesEnabled,
+  onToggleLiveUpdates,
+  onClearMetadataCache,
+  metadataCacheSize = 0,
+}: BalanceViewProps) {
+  const [isRefreshing_local, setIsRefreshing_local] = useState(false);
   const { bnbValuation, tokenValuations, isLoading: isLoadingPrices } = useBalanceValuations(
     bnbBalanceRaw,
-    tokenBalances
+    tokenBalances.map(t => ({ address: t.address, balanceRaw: t.balanceRaw, decimals: t.decimals }))
   );
-  const [newTokenAddress, setNewTokenAddress] = useState('');
-  const [newTokenLabel, setNewTokenLabel] = useState('');
-  const [isAddingToken, setIsAddingToken] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-
-  const BSC_CHAIN_ID = 56;
-  const isWrongNetwork = chainId !== null && chainId !== BSC_CHAIN_ID;
 
   const handleRefresh = async () => {
-    setIsRefreshing(true);
+    setIsRefreshing_local(true);
     try {
-      await refetch();
-      toast.success('Balances updated');
-    } catch (error: any) {
-      toast.error(error?.message || 'Failed to refresh balances');
+      await onRefresh();
+      toast.success('Balances refreshed successfully');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to refresh balances');
     } finally {
-      setIsRefreshing(false);
+      setIsRefreshing_local(false);
     }
   };
 
-  const handleAddToken = () => {
-    if (!newTokenAddress.trim()) {
-      toast.error('Please enter a token address');
-      return;
-    }
-    
-    setIsAddingToken(true);
-    try {
-      addToken(newTokenAddress);
-      // Save the label (or fallback if empty)
-      setTokenLabel(newTokenAddress, newTokenLabel);
-      toast.success('Token added to watch list');
-      setNewTokenAddress('');
-      setNewTokenLabel('');
-    } catch (error: any) {
-      // Display the descriptive error message from normalizeAddress
-      toast.error(error.message || 'Invalid token address');
-    } finally {
-      setIsAddingToken(false);
+  const handleToggleLiveUpdates = () => {
+    const newState = !liveUpdatesEnabled;
+    onToggleLiveUpdates(newState);
+    toast.success(newState ? 'Live updates enabled' : 'Live updates paused');
+  };
+
+  const handleClearCache = () => {
+    if (onClearMetadataCache) {
+      onClearMetadataCache();
+      toast.success('Token metadata cache cleared');
+      handleRefresh();
     }
   };
 
-  const handleRemoveToken = (address: string) => {
-    removeToken(address);
-    removeTokenLabel(address);
-    toast.success('Token removed from watch list');
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleAddToken();
-    }
-  };
-
-  const toggleLiveUpdates = () => {
-    setLiveUpdatesEnabled(!liveUpdatesEnabled);
-    toast.success(liveUpdatesEnabled ? 'Live updates paused' : 'Live updates enabled');
-  };
-
-  const formatLastUpdated = (date: Date | null): string => {
+  const formatLastUpdated = (date: Date | null) => {
     if (!date) return 'Never';
-    
     const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffSecs = Math.floor(diffMs / 1000);
+    const diff = now.getTime() - date.getTime();
+    const seconds = Math.floor(diff / 1000);
     
-    if (diffSecs < 10) return 'Just now';
-    if (diffSecs < 60) return `${diffSecs}s ago`;
-    
-    const diffMins = Math.floor(diffSecs / 60);
-    if (diffMins < 60) return `${diffMins}m ago`;
-    
-    const diffHours = Math.floor(diffMins / 60);
-    if (diffHours < 24) return `${diffHours}h ago`;
-    
-    return date.toLocaleString();
+    if (seconds < 60) return `${seconds}s ago`;
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    return `${hours}h ago`;
   };
 
-  return (
-    <div className="space-y-6">
-      {/* Read-only mode info */}
-      {!isConnected && (
-        <Alert className="border-primary/30 bg-primary/5">
-          <Info className="h-4 w-4 text-primary" />
-          <AlertTitle>Read-Only Mode</AlertTitle>
-          <AlertDescription>
-            Viewing balances in read-only mode. Connect your wallet to deposit or withdraw tokens.
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {/* Wrong network info */}
-      {isConnected && isWrongNetwork && (
-        <Alert className="border-primary/30 bg-primary/5">
-          <Info className="h-4 w-4 text-primary" />
-          <AlertTitle>Wrong Network</AlertTitle>
-          <AlertDescription>
-            Please switch to Binance Smart Chain (BSC) to interact with the vault.
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {/* Top-level fetch error */}
-      {fetchError && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Error Loading Balances</AlertTitle>
-          <AlertDescription>{fetchError}</AlertDescription>
-        </Alert>
-      )}
-
-      {/* Controls: Refresh and Live Updates */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-2">
-          <Button
-            onClick={handleRefresh}
-            disabled={isRefreshing || isLoading}
-            variant="outline"
-            size="sm"
-            className="min-h-[44px]"
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
-          
-          <Button
-            onClick={toggleLiveUpdates}
-            variant={liveUpdatesEnabled ? "default" : "outline"}
-            size="sm"
-            className="min-h-[44px]"
-          >
-            {liveUpdatesEnabled ? (
-              <>
-                <Pause className="h-4 w-4 mr-2" />
-                Pause Updates
-              </>
-            ) : (
-              <>
-                <Play className="h-4 w-4 mr-2" />
-                Resume Updates
-              </>
-            )}
-          </Button>
-        </div>
-
-        <div className="text-sm text-muted-foreground flex items-center gap-2">
-          <span>Last updated:</span>
-          <Badge variant="outline" className="font-mono">
-            {formatLastUpdated(lastUpdated)}
-          </Badge>
-        </div>
-      </div>
-
-      {/* BNB Balance Card */}
-      <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
+  if (isLoading) {
+    return (
+      <Card className="border-primary/20">
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Coins className="h-5 w-5 text-primary" />
-              <CardTitle>BNB Balance</CardTitle>
-            </div>
-            {isLoading && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
-          </div>
-          <CardDescription>Native BNB held in vault</CardDescription>
+          <CardTitle className="flex items-center gap-2">
+            <Coins className="h-5 w-5 text-primary" />
+            Vault Balances
+          </CardTitle>
+          <CardDescription>Loading vault balances...</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3">
-          {isLoading && !bnbBalance ? (
-            <Skeleton className="h-12 w-full" />
-          ) : (
-            <>
-              <div className="text-3xl font-bold text-primary">
-                {bnbBalance} BNB
-              </div>
-              
-              {/* Valuation */}
-              {bnbValuation?.usdValue && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <TrendingUp className="h-4 w-4" />
-                  <span>≈ ${bnbValuation.usdValue}</span>
-                  {isLoadingPrices && <Loader2 className="h-3 w-3 animate-spin" />}
-                </div>
-              )}
-
-              {/* Fallback notice */}
-              {bnbFallbackUsed && (
-                <Alert className="border-primary/30 bg-primary/5">
-                  <Info className="h-4 w-4 text-primary" />
-                  <AlertDescription className="text-xs">
-                    BNB balance shown from on-chain address balance fallback
-                  </AlertDescription>
-                </Alert>
-              )}
-
-              {/* Error notice (but keep balance visible) */}
-              {bnbError && (
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription className="text-xs">
-                    {bnbError}
-                  </AlertDescription>
-                </Alert>
-              )}
-            </>
-          )}
+        <CardContent>
+          <div className="flex items-center justify-center py-8">
+            <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+          </div>
         </CardContent>
       </Card>
+    );
+  }
 
-      {/* Token Balances */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Token Balances</CardTitle>
-          <CardDescription>BEP20 tokens held in vault</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {isLoading && tokenBalances.length === 0 ? (
-            <div className="space-y-2">
-              <Skeleton className="h-16 w-full" />
-              <Skeleton className="h-16 w-full" />
+  return (
+    <Card className="border-primary/20">
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Coins className="h-5 w-5 text-primary" />
+              Vault Balances
+            </CardTitle>
+            <CardDescription className="flex items-center gap-2 mt-1">
+              Last updated: {formatLastUpdated(lastUpdated)}
+              {isRefreshing && (
+                <RefreshCw className="h-3 w-3 animate-spin text-primary" />
+              )}
+            </CardDescription>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleToggleLiveUpdates}
+              className="gap-2"
+            >
+              {liveUpdatesEnabled ? (
+                <>
+                  <Pause className="h-4 w-4" />
+                  Pause
+                </>
+              ) : (
+                <>
+                  <Play className="h-4 w-4" />
+                  Resume
+                </>
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={isRefreshing_local || isRefreshing}
+              className="gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${(isRefreshing_local || isRefreshing) ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {error && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        {/* BNB Balance */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-lg">BNB</span>
+              {bnbFallbackUsed && (
+                <Badge variant="outline" className="text-xs">
+                  Read-only mode
+                </Badge>
+              )}
             </div>
-          ) : tokenBalances.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <Coins className="h-12 w-12 mx-auto mb-2 opacity-50" />
-              <p>No tokens added yet</p>
-              <p className="text-sm">Add a token address below to start tracking</p>
+            <div className="text-right">
+              <div className="font-mono text-lg font-semibold">
+                {parseFloat(bnbBalance).toFixed(6)} BNB
+              </div>
+              {bnbValuation.usdValue && !isLoadingPrices && (
+                <div className="text-sm text-muted-foreground flex items-center gap-1 justify-end">
+                  <TrendingUp className="h-3 w-3" />
+                  ${bnbValuation.usdValue} USD
+                </div>
+              )}
             </div>
-          ) : (
-            <div className="space-y-2">
+          </div>
+          {bnbError && (
+            <Alert variant="destructive" className="py-2">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription className="text-sm">{bnbError}</AlertDescription>
+            </Alert>
+          )}
+        </div>
+
+        {tokenBalances.length > 0 && (
+          <>
+            <Separator />
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-sm text-muted-foreground">BEP20 Tokens</h3>
+                {metadataCacheSize > 0 && onClearMetadataCache && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleClearCache}
+                    className="h-7 text-xs gap-1"
+                  >
+                    <Database className="h-3 w-3" />
+                    Clear cache ({metadataCacheSize})
+                  </Button>
+                )}
+              </div>
               {tokenBalances.map((token) => {
-                const valuation = tokenValuations.get(token.address);
+                const valuation = tokenValuations.get(token.address.toLowerCase());
                 
                 return (
-                  <div
-                    key={token.address}
-                    className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/5 transition-colors"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
+                  <div key={token.address} className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
                         <span className="font-semibold">{token.symbol}</span>
-                        {token.error && (
-                          <Badge variant="destructive" className="text-xs">
-                            Error
-                          </Badge>
+                        <span className="text-xs text-muted-foreground font-mono">
+                          {token.address.slice(0, 6)}...{token.address.slice(-4)}
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-mono font-semibold">
+                          {parseFloat(token.balance).toFixed(6)}
+                        </div>
+                        {valuation && !isLoadingPrices && (
+                          <div className="text-sm text-muted-foreground flex items-center gap-1 justify-end">
+                            <TrendingUp className="h-3 w-3" />
+                            {valuation.usdValue && `$${valuation.usdValue} USD`}
+                            {valuation.bnbValue && (
+                              <span className="text-xs">
+                                ({valuation.bnbValue} BNB)
+                              </span>
+                            )}
+                          </div>
                         )}
                       </div>
-                      <div className="text-2xl font-bold text-primary">
-                        {token.balance}
-                      </div>
-                      
-                      {/* Token valuation */}
-                      {valuation && valuation.usdValue && (
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-                          <TrendingUp className="h-3 w-3" />
-                          <span>≈ ${valuation.usdValue}</span>
-                          {valuation.bnbValue && (
-                            <span className="text-xs">({valuation.bnbValue} BNB)</span>
-                          )}
-                        </div>
-                      )}
-                      
-                      <div className="text-xs text-muted-foreground mt-1 truncate">
-                        {getTokenLabel(token.address) || token.address}
-                      </div>
-                      
-                      {token.error && (
-                        <div className="text-xs text-destructive mt-1">
-                          {token.error}
-                        </div>
-                      )}
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleRemoveToken(token.address)}
-                      className="ml-2 text-destructive hover:text-destructive hover:bg-destructive/10 min-h-[44px] min-w-[44px]"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
+                    {token.error && (
+                      <Alert variant="destructive" className="py-2">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertDescription className="text-sm">{token.error}</AlertDescription>
+                      </Alert>
+                    )}
                   </div>
                 );
               })}
             </div>
-          )}
+          </>
+        )}
 
-          {/* Add Token Form */}
-          <div className="pt-4 border-t space-y-3">
-            <div className="flex items-center gap-2 text-sm font-medium">
-              <Plus className="h-4 w-4" />
-              <span>Add Token to Watch List</span>
-            </div>
-            
-            <div className="space-y-2">
-              <div>
-                <Label htmlFor="token-address" className="text-xs">
-                  Token Contract Address
-                </Label>
-                <Input
-                  id="token-address"
-                  placeholder="0x..."
-                  value={newTokenAddress}
-                  onChange={(e) => setNewTokenAddress(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  className="font-mono text-sm"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="token-label" className="text-xs">
-                  Label (optional)
-                </Label>
-                <Input
-                  id="token-label"
-                  placeholder="e.g., USDT, BUSD, etc."
-                  value={newTokenLabel}
-                  onChange={(e) => setNewTokenLabel(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  className="text-sm"
-                />
-              </div>
-              
-              <Button
-                onClick={handleAddToken}
-                disabled={isAddingToken || !newTokenAddress.trim()}
-                className="w-full min-h-[44px]"
-              >
-                {isAddingToken ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Adding...
-                  </>
-                ) : (
-                  <>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Token
-                  </>
-                )}
-              </Button>
-            </div>
+        {tokenBalances.length === 0 && (
+          <div className="text-center py-8 text-muted-foreground">
+            <Coins className="h-12 w-12 mx-auto mb-3 opacity-50" />
+            <p className="text-sm">No tokens being watched</p>
+            <p className="text-xs mt-1">Add tokens to track their balances</p>
           </div>
-        </CardContent>
-      </Card>
-    </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

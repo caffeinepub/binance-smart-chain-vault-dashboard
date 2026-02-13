@@ -1,101 +1,63 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Digital Asset Vault branding update + local deposit/withdrawal transaction history",
+  "title": "Reachability health page + in-app performance check + clearer boot fallback (rollback v14)",
   "requirements": [
     {
-      "id": "REQ-35",
-      "summary": "Update primary branding copy to “Digital Asset Vault” in the Dashboard welcome section and Header, and remove the old subtitle.",
+      "id": "REQ-1",
+      "summary": "Add a static no-JavaScript reachability page at a stable path that displays the current build identifier.",
       "acceptanceCriteria": [
-        "On the Dashboard welcome section, the main title displays exactly “Digital Asset Vault”.",
-        "The subtitle text “Professional-grade asset management on Binance Smart Chain” is no longer shown anywhere in the welcome/hero area.",
-        "In the Header, the brand text displays “Digital Asset Vault” (and does not display “Vault Dashboard”).",
-        "All user-facing copy changes are in English and do not introduce new non-English strings."
+        "A new static asset is available at a stable path (e.g., `/health.html`) and loads without requiring the React app to boot.",
+        "The health page includes plain English text and shows the current build identifier (e.g., `rollback-v14-2026-02-13`).",
+        "If the main app URL fails to load but `/health.html` loads, the user can clearly tell it is an app boot issue rather than DNS/host resolution."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/pages/Dashboard.tsx",
-          "operation": "modify",
-          "description": "Update the welcome/hero copy: replace the main title with exactly “Digital Asset Vault” and remove the subtitle string. Ensure no leftover rendering of the removed subtitle remains. (Verify the component's usage instructions before implementing.)"
-        },
-        {
-          "path": "frontend/src/components/Header.tsx",
-          "operation": "modify",
-          "description": "Update header branding text to “Digital Asset Vault” and adjust the short/mobile variant to a sensible abbreviated label that is not “Vault Dashboard”. Remove/adjust any secondary tagline if it conflicts with the new branding. (Verify the component's usage instructions before implementing.)"
-        },
+          "path": "frontend/public/health.html",
+          "operation": "create",
+          "description": "Create a fully static HTML page (no JavaScript required) at /health.html that includes plain-English reachability guidance and renders the current build identifier consistent with frontend/index.html meta build-id (e.g., rollback-v14-2026-02-13)."
+        }
+      ]
+    },
+    {
+      "id": "REQ-2",
+      "summary": "Add a user-accessible Performance check section in the in-app diagnostics UI with timing metrics and copy-to-clipboard support.",
+      "acceptanceCriteria": [
+        "After the app loads, the Diagnostics area shows a clearly labeled “Performance check” section in English.",
+        "The performance check displays at least: deployed build ID, timestamp, and a measured time from initial navigation to the `app-mounted` event (in ms or s).",
+        "There is a “Copy” action that copies the performance data to clipboard in a readable text block."
+      ],
+      "file_operations": [
         {
           "path": "frontend/index.html",
           "operation": "modify",
-          "description": "Align document title and boot fallback loading copy with the new primary branding (“Digital Asset Vault”) while keeping all user-facing text in English. (Verify the component's usage instructions before implementing.)"
+          "description": "Extend the existing boot script to record a durable performance measurement for time-to-app-mounted using the existing app-mounted signal (e.g., store a window-scoped value captured when the app-mounted event fires) so the React UI can display it later without races."
+        },
+        {
+          "path": "frontend/src/lib/performanceCheck.ts",
+          "operation": "create",
+          "description": "Add a small helper to assemble performance-check data (build ID via existing buildInfo helpers, timestamp, time-to-app-mounted from the window-scoped value set in frontend/index.html, and browser navigation timing when available) into a readable text block for display/copy."
+        },
+        {
+          "path": "frontend/src/components/DiagnosticsBar.tsx",
+          "operation": "modify",
+          "description": "Update the existing diagnostics UI to include a clearly labeled “Performance check” section and a one-click copy-to-clipboard action for the performance output. Use existing shadcn-ui components (e.g., Button/Badge/Card/Alert as already available) to present the section consistently; verify the component's usage instructions before implementing."
         }
       ]
     },
     {
-      "id": "REQ-36",
-      "summary": "Add a local, persistent Deposit/Withdrawal History UI with status tracking (Pending/Confirmed/Failed), accessible from Deposit and Withdraw flows via a clearly labeled control.",
+      "id": "REQ-3",
+      "summary": "Keep boot fallback messaging clear/consistent across existing failure modes and include build identifier in all non-success states.",
       "acceptanceCriteria": [
-        "After a successful submission of a deposit or withdrawal transaction from this dApp, an entry is added to a local history list.",
-        "Each history entry shows: operation type (Deposit Token / Withdraw BNB / Withdraw Token), asset (BNB or token address/label if available), amount (as entered), timestamp, and transaction hash (shortened display is OK).",
-        "Each history entry displays a status that updates over time: Pending until confirmed, then Confirmed; if the transaction fails/reverts, status becomes Failed.",
-        "History is visible from the Deposit and Withdraw flows via a clearly labeled control such as “Deposit & Withdrawal History”.",
-        "History persists across page refreshes (e.g., stored locally in the browser)."
+        "When the app is still loading, times out, or fails due to a resource/network/runtime error, the boot fallback UI includes the build identifier visibly.",
+        "The fallback messages are in plain English and do not require the user to open developer tools to identify the error category and build ID.",
+        "On successful load, the boot fallback hides as it does now (triggered by `app-mounted` or root mutation)."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/hooks/useTxHistory.ts",
-          "operation": "create",
-          "description": "Create a localStorage-backed transaction history hook for transactions initiated by this dApp. It should support adding entries (type, asset, amount, timestamp, tx hash) and polling for receipt updates to transition status from Pending to Confirmed/Failed (no WebSockets). (Verify the component's usage instructions before implementing.)"
-        },
-        {
-          "path": "frontend/src/components/TransactionHistory.tsx",
-          "operation": "create",
-          "description": "Create a reusable TransactionHistory UI component that renders the locally stored history list with columns/rows for type, asset, amount, time, tx hash (short display), and status (Pending/Confirmed/Failed). Use existing shadcn-ui primitives already in the app (e.g., Card, Button, Alert) without editing any files under frontend/src/components/ui. Verify the component's usage instructions before implementing."
-        },
-        {
-          "path": "frontend/src/hooks/useVaultOperations.ts",
+          "path": "frontend/index.html",
           "operation": "modify",
-          "description": "Update vault operation helpers to return the transaction hash string from wallet submission for deposit/withdraw actions so the UI can add entries to local history immediately after submission. Keep behavior otherwise consistent. (Verify the component's usage instructions before implementing.)"
-        },
-        {
-          "path": "frontend/src/components/DepositForm.tsx",
-          "operation": "modify",
-          "description": "Wire transaction history into the deposit flow: after a successful deposit submission (vault deposit transaction), add an entry to local history with type “Deposit Token”, asset token address/label if available, amount, timestamp, and tx hash. Add a clearly labeled control “Deposit & Withdrawal History” associated with the Deposit UI that toggles/displays the TransactionHistory component. Use existing shadcn-ui Button/Card primitives; do not modify frontend/src/components/ui files. Verify the component's usage instructions before implementing."
-        },
-        {
-          "path": "frontend/src/components/WithdrawForm.tsx",
-          "operation": "modify",
-          "description": "Wire transaction history into the withdraw flows: after successful submission, add entries for “Withdraw BNB” and “Withdraw Token” with asset (BNB or token address/label), amount, timestamp, and tx hash. Add a clearly labeled “Deposit & Withdrawal History” control associated with the Withdraw UI that toggles/displays the TransactionHistory component. Use existing shadcn-ui primitives; do not modify frontend/src/components/ui files. Verify the component's usage instructions before implementing."
-        }
-      ]
-    },
-    {
-      "id": "REQ-37",
-      "summary": "Add history management actions: clear history (with confirmation) and BscScan links per transaction.",
-      "acceptanceCriteria": [
-        "A “Clear History” action is available and removes all locally stored history entries after user confirmation (or an equivalent safe UX).",
-        "Each history item includes a link that opens the transaction on BscScan in a new tab/window.",
-        "Clearing history does not affect balances, watched tokens, or saved token catalog state."
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/hooks/useTxHistory.ts",
-          "operation": "modify",
-          "description": "Add history management methods to the history hook: clear-all (history only), and helpers for building a BscScan transaction URL from tx hash. Ensure the localStorage key used is isolated to history so clearing does not touch balances, watched tokens, or token catalog state. (Verify the component's usage instructions before implementing.)"
-        },
-        {
-          "path": "frontend/src/components/TransactionHistory.tsx",
-          "operation": "modify",
-          "description": "Add UI actions: a “Clear History” button with a confirmation step (e.g., native confirm or safe UX using existing primitives) and a per-item tx hash link that opens the transaction on BscScan in a new tab/window. Ensure link uses rel=\"noopener noreferrer\". Use existing shadcn-ui Button/Alert/Card primitives; do not modify frontend/src/components/ui files. Verify the component's usage instructions before implementing."
-        },
-        {
-          "path": "frontend/src/components/DepositForm.tsx",
-          "operation": "modify",
-          "description": "Ensure the embedded/toggled TransactionHistory view within Deposit exposes the clear-history action and BscScan links (via the shared TransactionHistory component), without impacting any other locally stored state. (Verify the component's usage instructions before implementing.)"
-        },
-        {
-          "path": "frontend/src/components/WithdrawForm.tsx",
-          "operation": "modify",
-          "description": "Ensure the embedded/toggled TransactionHistory view within Withdraw exposes the clear-history action and BscScan links (via the shared TransactionHistory component), without impacting any other locally stored state. (Verify the component's usage instructions before implementing.)"
+          "description": "Adjust the boot fallback UI text so it remains plain-English and consistent for the three existing failure modes (resource/script load failure, network/connection issue, runtime error), and ensure the build identifier is visible in every non-success state including the initial loading state (not only after the still-loading threshold). Keep the existing success behavior where the fallback hides on app-mounted/root mutation."
         }
       ]
     }

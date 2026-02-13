@@ -1,30 +1,26 @@
 import { useState } from 'react';
-import { Wallet, ArrowDownToLine, ArrowUpFromLine, Info, AlertCircle, Shield } from 'lucide-react';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
+import { Shield, History } from 'lucide-react';
 import WalletConnect from '@/components/WalletConnect';
-import BalanceView from '@/components/BalanceView';
+import { BalanceView } from '@/components/BalanceView';
 import DepositForm from '@/components/DepositForm';
 import WithdrawForm from '@/components/WithdrawForm';
 import ContractInfo from '@/components/ContractInfo';
+import { DiagnosticsBar } from '@/components/DiagnosticsBar';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent } from '@/components/ui/card';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
 import { useWeb3 } from '@/hooks/useWeb3';
 import { useVaultBalances } from '@/hooks/useVaultBalances';
 
-export default function Dashboard() {
-  const { account, isConnected, isInitializing, hasMetaMask, isMobile, chainId, error: web3Error, switchToBSC } = useWeb3();
-  const [activeTab, setActiveTab] = useState('balances');
+const BSC_CHAIN_ID = 56;
+
+export function Dashboard() {
+  const { isConnected, chainId, isMobile, hasMetaMask, switchToBSC } = useWeb3();
   const [isSwitching, setIsSwitching] = useState(false);
+  
+  // V14: Enable polling immediately
+  const vaultBalances = useVaultBalances(true);
 
-  // Lift vault balances to Dashboard level so they're available across all tabs
-  const vaultBalances = useVaultBalances();
-
-  const BSC_CHAIN_ID = 56;
-  const isWrongNetwork = hasMetaMask && chainId !== null && chainId !== BSC_CHAIN_ID;
+  const isWrongNetwork = isConnected && chainId !== null && chainId !== BSC_CHAIN_ID;
 
   const handleSwitchNetwork = async () => {
     setIsSwitching(true);
@@ -37,202 +33,92 @@ export default function Dashboard() {
     }
   };
 
-  // Show loading state during initialization
-  if (isInitializing) {
-    return (
-      <div className="min-h-screen flex flex-col bg-gradient-to-br from-background via-primary/5 to-chart-1/10">
-        <Header />
-        <main className="flex-1 container mx-auto px-4 py-6 md:py-8">
-          <div className="max-w-4xl mx-auto space-y-6">
-            <div className="text-center space-y-2">
-              <Skeleton className="h-10 w-64 mx-auto" />
-              <Skeleton className="h-4 w-96 mx-auto" />
-            </div>
-            <Card>
-              <CardContent className="pt-6">
-                <div className="space-y-4">
-                  <Skeleton className="h-12 w-12 rounded-full mx-auto" />
-                  <Skeleton className="h-8 w-48 mx-auto" />
-                  <Skeleton className="h-10 w-full max-w-xs mx-auto" />
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </main>
-        <Footer />
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-background via-primary/5 to-chart-1/10">
-      <Header />
-      
-      <main className="flex-1 container mx-auto px-4 py-6 md:py-8">
-        <div className="max-w-4xl mx-auto space-y-6">
-          {/* Welcome Section */}
-          <div className="text-center space-y-3 py-6">
-            <div className="flex items-center justify-center gap-3 mb-2">
-              <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-primary via-chart-1 to-chart-2 flex items-center justify-center shadow-xl">
-                <Shield className="h-7 w-7 text-primary-foreground" />
-              </div>
-            </div>
-            <h1 className="text-3xl md:text-5xl font-bold bg-gradient-to-r from-primary via-chart-1 to-chart-2 bg-clip-text text-transparent">
-              Digital Asset Vault
-            </h1>
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-background via-background to-primary/5">
+      <div className="flex-1 container mx-auto px-4 py-8 max-w-6xl">
+        {/* Hero Section */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-accent mb-4 shadow-lg">
+            <Shield className="h-8 w-8 text-primary-foreground" />
           </div>
-
-          {/* Wallet Not Available Alert (Mobile) */}
-          {!hasMetaMask && isMobile && (
-            <Alert className="border-primary/30 bg-primary/5">
-              <AlertCircle className="h-4 w-4 text-primary" />
-              <AlertTitle>Open in Wallet Browser</AlertTitle>
-              <AlertDescription className="space-y-2">
-                <p>To use this dApp on mobile, open it inside your wallet app's built-in browser.</p>
-                <p className="text-sm">
-                  Supported wallets: MetaMask, Trust Wallet, SafePal, TokenPocket, and other EVM-compatible wallets.
-                </p>
-                <p className="text-sm font-medium">
-                  Open your wallet app → Tap browser icon → Enter this URL
-                </p>
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {/* Wallet Not Available Alert (Desktop) */}
-          {!hasMetaMask && !isMobile && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>EVM Wallet Not Detected</AlertTitle>
-              <AlertDescription className="space-y-2">
-                <p>An EVM-compatible wallet extension is required to use this application.</p>
-                <p className="text-sm">
-                  Install MetaMask, Trust Wallet, or another EVM wallet extension from{' '}
-                  <a 
-                    href="https://metamask.io/download/" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="underline font-medium hover:text-destructive-foreground"
-                  >
-                    metamask.io
-                  </a>
-                  {' '}and refresh this page.
-                </p>
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {/* Wrong Network Alert */}
-          {hasMetaMask && isWrongNetwork && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Wrong Network</AlertTitle>
-              <AlertDescription className="space-y-3">
-                <p>You're connected to chain ID {chainId}. This dApp requires Binance Smart Chain (chain ID 56).</p>
-                <Button
-                  onClick={handleSwitchNetwork}
-                  disabled={isSwitching}
-                  size="sm"
-                  variant="outline"
-                  className="bg-background hover:bg-background/80"
-                >
-                  {isSwitching ? 'Switching...' : 'Switch to BSC Network'}
-                </Button>
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {/* Network Error Alert */}
-          {hasMetaMask && web3Error && !isConnected && !isWrongNetwork && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{web3Error}</AlertDescription>
-            </Alert>
-          )}
-
-          {/* Wallet Connection Card (when not connected) */}
-          {!isConnected && (
-            <Card className="border-2 border-primary/30 shadow-xl bg-gradient-to-br from-card via-primary/5 to-chart-1/5">
-              <CardContent className="pt-6">
-                <WalletConnect />
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Connected Wallet Info */}
-          {isConnected && (
-            <Card className="bg-gradient-to-r from-primary/10 via-chart-1/10 to-chart-2/10 border-primary/40 shadow-md">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between flex-wrap gap-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-full bg-primary/20">
-                      <Wallet className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Connected Wallet</p>
-                      <p className="font-mono text-sm md:text-base font-medium break-all">
-                        {account}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Main Tabs - Always visible */}
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-4 h-auto bg-primary/10 border border-primary/20">
-              <TabsTrigger 
-                value="balances" 
-                className="flex flex-col md:flex-row items-center gap-1 md:gap-2 py-2 px-2 md:px-4 min-h-[3rem] md:min-h-0 data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-chart-1 data-[state=active]:text-primary-foreground"
-              >
-                <Wallet className="h-4 w-4 flex-shrink-0" />
-                <span className="text-xs md:text-sm">Balances</span>
-              </TabsTrigger>
-              <TabsTrigger 
-                value="deposit" 
-                className="flex flex-col md:flex-row items-center gap-1 md:gap-2 py-2 px-2 md:px-4 min-h-[3rem] md:min-h-0 data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-chart-1 data-[state=active]:text-primary-foreground"
-              >
-                <ArrowDownToLine className="h-4 w-4 flex-shrink-0" />
-                <span className="text-xs md:text-sm">Deposit</span>
-              </TabsTrigger>
-              <TabsTrigger 
-                value="withdraw" 
-                className="flex flex-col md:flex-row items-center gap-1 md:gap-2 py-2 px-2 md:px-4 min-h-[3rem] md:min-h-0 data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-chart-1 data-[state=active]:text-primary-foreground"
-              >
-                <ArrowUpFromLine className="h-4 w-4 flex-shrink-0" />
-                <span className="text-xs md:text-sm">Withdraw</span>
-              </TabsTrigger>
-              <TabsTrigger 
-                value="info" 
-                className="flex flex-col md:flex-row items-center gap-1 md:gap-2 py-2 px-2 md:px-4 min-h-[3rem] md:min-h-0 data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-chart-1 data-[state=active]:text-primary-foreground"
-              >
-                <Info className="h-4 w-4 flex-shrink-0" />
-                <span className="text-xs md:text-sm">Info</span>
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="balances" className="mt-6">
-              <BalanceView vaultBalances={vaultBalances} />
-            </TabsContent>
-
-            <TabsContent value="deposit" className="mt-6">
-              <DepositForm vaultBalances={vaultBalances} isConnected={isConnected} isWrongNetwork={isWrongNetwork} onSwitchNetwork={handleSwitchNetwork} isSwitching={isSwitching} />
-            </TabsContent>
-
-            <TabsContent value="withdraw" className="mt-6">
-              <WithdrawForm vaultBalances={vaultBalances} isConnected={isConnected} isWrongNetwork={isWrongNetwork} onSwitchNetwork={handleSwitchNetwork} isSwitching={isSwitching} />
-            </TabsContent>
-
-            <TabsContent value="info" className="mt-6">
-              <ContractInfo />
-            </TabsContent>
-          </Tabs>
+          <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary via-primary to-accent bg-clip-text text-transparent">
+            Digital Asset Vault
+          </h1>
         </div>
-      </main>
 
-      <Footer />
+        {/* V14: Show dashboard when connected, regardless of chain */}
+        {!isConnected ? (
+          <div className="max-w-2xl mx-auto">
+            <WalletConnect />
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {/* Balance View */}
+            <BalanceView
+              bnbBalance={vaultBalances.bnbBalance}
+              bnbBalanceRaw={vaultBalances.bnbBalanceRaw}
+              bnbError={vaultBalances.bnbError}
+              bnbFallbackUsed={vaultBalances.bnbFallbackUsed}
+              tokenBalances={vaultBalances.tokenBalances}
+              isLoading={vaultBalances.isLoading}
+              isRefreshing={vaultBalances.isRefreshing}
+              error={vaultBalances.error}
+              onRefresh={vaultBalances.refetch}
+              lastUpdated={vaultBalances.lastUpdated}
+              liveUpdatesEnabled={vaultBalances.liveUpdatesEnabled}
+              onToggleLiveUpdates={vaultBalances.setLiveUpdatesEnabled}
+              onClearMetadataCache={vaultBalances.clearMetadataCache}
+              metadataCacheSize={vaultBalances.metadataCacheSize}
+            />
+
+            {/* Operations Tabs */}
+            <Card className="border-primary/20">
+              <CardHeader>
+                <CardTitle>Vault Operations</CardTitle>
+                <CardDescription>
+                  Deposit or withdraw assets from your vault
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Tabs defaultValue="deposit" className="w-full">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="deposit">Deposit</TabsTrigger>
+                    <TabsTrigger value="withdraw">Withdraw</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="deposit" className="mt-6">
+                    <DepositForm
+                      vaultBalances={vaultBalances}
+                      isConnected={isConnected}
+                      isWrongNetwork={isWrongNetwork}
+                      onSwitchNetwork={handleSwitchNetwork}
+                      isSwitching={isSwitching}
+                    />
+                  </TabsContent>
+                  <TabsContent value="withdraw" className="mt-6">
+                    <WithdrawForm
+                      vaultBalances={vaultBalances}
+                      isConnected={isConnected}
+                      isWrongNetwork={isWrongNetwork}
+                      onSwitchNetwork={handleSwitchNetwork}
+                      isSwitching={isSwitching}
+                    />
+                  </TabsContent>
+                </Tabs>
+              </CardContent>
+            </Card>
+
+            {/* Contract Info */}
+            <ContractInfo />
+          </div>
+        )}
+      </div>
+
+      {/* Diagnostics Bar */}
+      <DiagnosticsBar
+        chainId={chainId}
+        isMobile={isMobile}
+        hasMetaMask={hasMetaMask}
+      />
     </div>
   );
 }

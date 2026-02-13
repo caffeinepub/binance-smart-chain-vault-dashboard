@@ -1,193 +1,185 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useWeb3 } from './useWeb3';
-import { useWatchedTokens } from './useWatchedTokens';
-import { VAULT_ADDRESS, encodeCall, decodeResult } from '@/lib/contracts';
+import { VAULT_ADDRESS, decodeUint256 } from '@/lib/contracts';
 import { formatUnits } from '@/lib/evm';
+import { useWatchedTokens } from './useWatchedTokens';
+import { decodeTokenSymbol } from '@/lib/evmAbiText';
+import { useTokenMetadataCache } from './useTokenMetadataCache';
 
-interface TokenBalance {
+const POLL_INTERVAL = 10000; // 10 seconds
+
+export interface TokenBalance {
   address: string;
+  symbol: string;
   balance: string;
   balanceRaw: bigint;
-  symbol: string;
   decimals: number;
-  error?: string;
 }
 
-const POLLING_INTERVAL = 15000; // 15 seconds
+export function useVaultBalances(enablePolling = true) {
+  const { callContract, isConnected } = useWeb3();
+  const { tokens: watchedTokens } = useWatchedTokens();
+  const { get: getMetadata, set: setMetadata, cacheSize, clear: clearCache } = useTokenMetadataCache();
 
-export function useVaultBalances() {
-  const { callContract, getNativeBalance } = useWeb3();
-  const { tokens } = useWatchedTokens();
   const [bnbBalance, setBnbBalance] = useState<string>('0');
   const [bnbBalanceRaw, setBnbBalanceRaw] = useState<bigint>(0n);
   const [bnbError, setBnbError] = useState<string | null>(null);
-  const [bnbFallbackUsed, setBnbFallbackUsed] = useState<boolean>(false);
+  const [bnbFallbackUsed, setBnbFallbackUsed] = useState(false);
   const [tokenBalances, setTokenBalances] = useState<TokenBalance[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [liveUpdatesEnabled, setLiveUpdatesEnabled] = useState(true);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  const fetchBalances = async () => {
-    setIsLoading(true);
-    setError(null);
+  const fetchBnbBalance = useCallback(async () => {
+    if (!isConnected) return;
 
     try {
-      // Fetch BNB balance - try contract first, then fallback to native balance
-      let bnbFetchSuccess = false;
-      try {
-        const bnbData = encodeCall('bnbBalance', []);
-        const bnbResult = await callContract(VAULT_ADDRESS, bnbData);
-        const bnbRaw = decodeResult(bnbResult, 'uint256') as bigint;
-        setBnbBalanceRaw(bnbRaw);
-        setBnbBalance(formatUnits(bnbRaw, 18));
-        setBnbError(null);
-        setBnbFallbackUsed(false);
-        bnbFetchSuccess = true;
-      } catch (err: any) {
-        console.warn('Contract bnbBalance() call failed, trying fallback:', err);
-        
-        // Try fallback: get native balance of vault address
-        try {
-          const nativeBalance = await getNativeBalance(VAULT_ADDRESS);
-          setBnbBalanceRaw(nativeBalance);
-          setBnbBalance(formatUnits(nativeBalance, 18));
-          setBnbError(null);
-          setBnbFallbackUsed(true);
-          bnbFetchSuccess = true;
-        } catch (fallbackErr: any) {
-          console.error('Fallback balance fetch also failed:', fallbackErr);
-          const errorMessage = fallbackErr.message || 'Unable to fetch BNB balance. Check network and try again.';
-          setBnbError(errorMessage);
-          // Keep previous balance values instead of resetting to 0
-        }
-      }
+      setBnbError(null);
+      setBnbFallbackUsed(false);
 
-      // Fetch token balances using Promise.allSettled for resilient per-token error handling
-      const balancePromises = tokens.map(async (tokenAddress): Promise<TokenBalance> => {
-        try {
-          // Fetch balance using ERC20 balanceOf
-          const balanceData = encodeCall('balanceOf', [
-            { type: 'address', value: VAULT_ADDRESS }
-          ]);
-          const balanceResult = await callContract(tokenAddress, balanceData);
-          const balanceRaw = decodeResult(balanceResult, 'uint256') as bigint;
-
-          // Fetch symbol
-          const symbolData = '0x95d89b41'; // symbol()
-          let symbol = 'TOKEN';
-          try {
-            const symbolResult = await callContract(tokenAddress, symbolData);
-            // Decode string from bytes32 or dynamic string
-            if (symbolResult && symbolResult !== '0x') {
-              // Try to decode as string (skip first 64 chars for offset+length, then decode hex)
-              const hex = symbolResult.slice(2);
-              if (hex.length >= 128) {
-                const strHex = hex.slice(128);
-                symbol = Buffer.from(strHex, 'hex').toString('utf8').replace(/\0/g, '');
-              } else if (hex.length > 0) {
-                symbol = Buffer.from(hex, 'hex').toString('utf8').replace(/\0/g, '');
-              }
-            }
-          } catch {
-            // Use default symbol if fetch fails
-          }
-
-          // Fetch decimals
-          const decimalsData = '0x313ce567'; // decimals()
-          let decimals = 18;
-          try {
-            const decimalsResult = await callContract(tokenAddress, decimalsData);
-            decimals = parseInt(decimalsResult, 16);
-          } catch {
-            // Use default decimals if fetch fails
-          }
-
-          const balance = formatUnits(balanceRaw, decimals);
-
-          return {
-            address: tokenAddress,
-            balance,
-            balanceRaw,
-            symbol,
-            decimals,
-          };
-        } catch (err: any) {
-          console.error(`Error fetching balance for ${tokenAddress}:`, err);
-          return {
-            address: tokenAddress,
-            balance: '0',
-            balanceRaw: 0n,
-            symbol: 'ERROR',
-            decimals: 18,
-            error: err.message || 'Failed to fetch token balance',
-          };
-        }
-      });
-
-      const results = await Promise.allSettled(balancePromises);
-      const balances = results.map((result) =>
-        result.status === 'fulfilled' ? result.value : {
-          address: '',
-          balance: '0',
-          balanceRaw: 0n,
-          symbol: 'ERROR',
-          decimals: 18,
-          error: 'Failed to fetch token balance',
-        }
+      const balanceHex = await callContract(
+        VAULT_ADDRESS,
+        '0x12065fe0' // getBalance()
       );
 
-      setTokenBalances(balances);
-      
-      // Update last updated timestamp on successful fetch
-      if (bnbFetchSuccess || balances.length > 0) {
-        setLastUpdated(new Date());
-      }
+      const balance = decodeUint256(balanceHex);
+      const formatted = formatUnits(balance, 18);
+
+      setBnbBalanceRaw(balance);
+      setBnbBalance(formatted);
     } catch (err: any) {
-      console.error('Error fetching balances:', err);
-      setError(err.message || 'Failed to fetch balances. Please check your connection and try again.');
-    } finally {
+      console.error('Failed to fetch BNB balance:', err);
+      setBnbError(err.message || 'Failed to fetch BNB balance');
+      setBnbBalance('0');
+      setBnbBalanceRaw(0n);
+    }
+  }, [callContract, isConnected]);
+
+  const fetchTokenMetadata = useCallback(
+    async (tokenAddress: string): Promise<{ symbol: string; decimals: number }> => {
+      // Check cache first
+      const cached = getMetadata(tokenAddress);
+      if (cached) {
+        return cached;
+      }
+
+      try {
+        // Fetch symbol
+        const symbolData = await callContract(tokenAddress, '0x95d89b41');
+        const symbol = decodeTokenSymbol(symbolData, 'TOKEN');
+
+        // Fetch decimals
+        const decimalsData = await callContract(tokenAddress, '0x313ce567');
+        const decimals = parseInt(decimalsData, 16);
+
+        const metadata = { symbol, decimals };
+        setMetadata(tokenAddress, metadata);
+        return metadata;
+      } catch (err) {
+        console.error(`Failed to fetch metadata for ${tokenAddress}:`, err);
+        return { symbol: 'UNKNOWN', decimals: 18 };
+      }
+    },
+    [callContract, getMetadata, setMetadata]
+  );
+
+  const fetchTokenBalances = useCallback(async () => {
+    if (!isConnected || watchedTokens.length === 0) {
+      setTokenBalances([]);
+      return;
+    }
+
+    try {
+      const balances = await Promise.all(
+        watchedTokens.map(async (tokenAddress) => {
+          try {
+            // Fetch balance
+            const balanceData = await callContract(
+              tokenAddress,
+              '0x70a08231' + VAULT_ADDRESS.slice(2).padStart(64, '0') // balanceOf(address)
+            );
+            const balanceRaw = decodeUint256(balanceData);
+
+            // Fetch metadata (with caching)
+            const { symbol, decimals } = await fetchTokenMetadata(tokenAddress);
+
+            const balance = formatUnits(balanceRaw, decimals);
+
+            return {
+              address: tokenAddress,
+              symbol,
+              balance,
+              balanceRaw,
+              decimals,
+            };
+          } catch (err) {
+            console.error(`Failed to fetch balance for ${tokenAddress}:`, err);
+            return null;
+          }
+        })
+      );
+
+      setTokenBalances(balances.filter((b): b is TokenBalance => b !== null));
+    } catch (err: any) {
+      console.error('Failed to fetch token balances:', err);
+      setError(err.message || 'Failed to fetch token balances');
+    }
+  }, [callContract, isConnected, watchedTokens, fetchTokenMetadata]);
+
+  const fetchAllBalances = useCallback(
+    async (isInitial = false) => {
+      if (!isConnected) {
+        setIsLoading(false);
+        return;
+      }
+
+      if (isInitial) {
+        setIsLoading(true);
+      } else {
+        setIsRefreshing(true);
+      }
+
+      setError(null);
+
+      try {
+        await Promise.all([fetchBnbBalance(), fetchTokenBalances()]);
+        setLastUpdated(new Date());
+      } catch (err: any) {
+        console.error('Failed to fetch balances:', err);
+        setError(err.message || 'Failed to fetch balances');
+      } finally {
+        setIsLoading(false);
+        setIsRefreshing(false);
+      }
+    },
+    [isConnected, fetchBnbBalance, fetchTokenBalances]
+  );
+
+  // Initial fetch - only when connected
+  useEffect(() => {
+    if (isConnected) {
+      fetchAllBalances(true);
+    } else {
       setIsLoading(false);
     }
-  };
+  }, [isConnected, fetchAllBalances]);
 
-  const refetch = async () => {
-    try {
-      await fetchBalances();
-    } catch (err: any) {
-      throw new Error(err.message || 'Failed to refresh balances');
-    }
-  };
-
-  // Initial fetch
+  // Polling - only when enabled and connected
   useEffect(() => {
-    fetchBalances();
-  }, [tokens.join(',')]);
+    if (!liveUpdatesEnabled || !isConnected || !enablePolling) return;
 
-  // Polling effect
-  useEffect(() => {
-    // Clear any existing interval
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
+    const interval = setInterval(() => {
+      fetchAllBalances(false);
+    }, POLL_INTERVAL);
 
-    // Start polling if enabled
-    if (liveUpdatesEnabled) {
-      intervalRef.current = setInterval(() => {
-        fetchBalances();
-      }, POLLING_INTERVAL);
-    }
+    return () => clearInterval(interval);
+  }, [liveUpdatesEnabled, isConnected, enablePolling, fetchAllBalances]);
 
-    // Cleanup on unmount or when liveUpdatesEnabled changes
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-    };
-  }, [liveUpdatesEnabled, tokens.join(',')]);
+  const clearMetadataCache = useCallback(() => {
+    clearCache();
+  }, [clearCache]);
 
   return {
     bnbBalance,
@@ -196,10 +188,13 @@ export function useVaultBalances() {
     bnbFallbackUsed,
     tokenBalances,
     isLoading,
+    isRefreshing,
     error,
-    refetch,
+    refetch: () => fetchAllBalances(false),
     lastUpdated,
     liveUpdatesEnabled,
     setLiveUpdatesEnabled,
+    clearMetadataCache,
+    metadataCacheSize: cacheSize,
   };
 }

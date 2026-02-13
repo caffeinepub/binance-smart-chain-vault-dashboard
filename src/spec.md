@@ -1,14 +1,11 @@
 # Specification
 
 ## Summary
-**Goal:** Rename the app branding to “Digital Asset Vault” and add a local Deposit/Withdrawal transaction history with status tracking.
+**Goal:** Improve deployment stability diagnosis by adding a static reachability page, in-app performance self-check, and clearer boot fallback messaging with build identification.
 
 **Planned changes:**
-- Update dashboard/hero copy to display the main title exactly “Digital Asset Vault” and remove the subtitle “Professional-grade asset management on Binance Smart Chain”.
-- Update header brand text to “Digital Asset Vault” (including a sensible short/mobile variant if needed) and ensure it no longer shows “Vault Dashboard”.
-- Add a “Deposit & Withdrawal History” control associated with the Deposit and Withdraw areas to access a history view.
-- Record deposits/withdrawals initiated from the dApp into a locally persisted history list (survives refresh) including: operation type, asset (BNB or token label/address if available), amount, timestamp, and tx hash (short display acceptable).
-- Display and update per-transaction status over time (Pending → Confirmed; Failed on revert/failure) without introducing backend storage or real-time WebSocket updates.
-- Provide history management actions: open tx hash on BscScan in a new tab/window, and a “Clear History” action with a safe confirmation step.
+- Add a static, no-JavaScript reachability page at a stable path (e.g., `/health.html`) that loads without the React app and displays the current build identifier.
+- Add a “Performance check” section to the existing in-app Diagnostics UI that reports basic load timing (including time to `app-mounted` and navigation timing when available), plus build ID and timestamp, with a one-click copy-to-clipboard output.
+- Ensure the existing boot fallback screen keeps clear, consistent English text for its current failure modes (resource/script load failure, network/connection issue, runtime error) and displays the build identifier in all non-success states.
 
-**User-visible outcome:** Users see updated “Digital Asset Vault” branding and can open a Deposit & Withdrawal History view from the deposit/withdraw flows to track submitted transactions (with status), open them on BscScan, and clear the locally stored history.
+**User-visible outcome:** Users can open `/health.html` to confirm reachability and build version even if the app won’t boot, view a Performance check inside Diagnostics with copyable timing data, and see clearer fallback error messaging that includes the build ID during load failures.

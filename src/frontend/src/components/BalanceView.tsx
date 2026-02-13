@@ -95,7 +95,7 @@ export function BalanceView({
     return `${hours}h ago`;
   };
 
-  // Show spinner only when actually refreshing (not during local button state)
+  // Show spinner during background refresh (not during button click)
   const showSpinner = isRefreshing && !isRefreshingLocal;
 
   if (isLoading) {
@@ -177,86 +177,56 @@ export function BalanceView({
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="font-semibold text-lg">BNB</span>
+              <span className="font-semibold">BNB</span>
               {bnbFallbackUsed && (
                 <Badge variant="outline" className="text-xs">
-                  Read-only mode
+                  Fallback
                 </Badge>
               )}
             </div>
             <div className="text-right">
-              <div className="font-mono text-lg font-semibold">
-                {parseFloat(bnbBalance).toFixed(6)} BNB
-              </div>
+              <div className="font-mono font-semibold">{bnbBalance}</div>
               {bnbValuation.usdValue && !isLoadingPrices && (
-                <div className="text-sm text-muted-foreground flex items-center gap-1 justify-end">
+                <div className="text-xs text-muted-foreground flex items-center gap-1 justify-end">
                   <TrendingUp className="h-3 w-3" />
-                  ${bnbValuation.usdValue} USD
+                  ${bnbValuation.usdValue}
                 </div>
               )}
             </div>
           </div>
           {bnbError && (
             <Alert variant="destructive" className="py-2">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription className="text-sm">{bnbError}</AlertDescription>
+              <AlertCircle className="h-3 w-3" />
+              <AlertDescription className="text-xs">{bnbError}</AlertDescription>
             </Alert>
           )}
         </div>
 
+        {/* Token Balances */}
         {tokenBalances.length > 0 && (
           <>
             <Separator />
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-sm text-muted-foreground">BEP20 Tokens</h3>
-                {metadataCacheSize > 0 && onClearMetadataCache && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleClearCache}
-                    className="h-7 text-xs gap-1"
-                  >
-                    <Database className="h-3 w-3" />
-                    Clear cache ({metadataCacheSize})
-                  </Button>
-                )}
-              </div>
               {tokenBalances.map((token) => {
-                const valuation = tokenValuations.get(token.address.toLowerCase());
-                
+                const valuation = tokenValuations.get(token.address);
                 return (
-                  <div key={token.address} className="space-y-1">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold">{token.symbol}</span>
-                        <span className="text-xs text-muted-foreground font-mono">
-                          {token.address.slice(0, 6)}...{token.address.slice(-4)}
-                        </span>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-mono font-semibold">
-                          {parseFloat(token.balance).toFixed(6)}
-                        </div>
-                        {valuation && !isLoadingPrices && (
-                          <div className="text-sm text-muted-foreground flex items-center gap-1 justify-end">
-                            <TrendingUp className="h-3 w-3" />
-                            {valuation.usdValue && `$${valuation.usdValue} USD`}
-                            {valuation.bnbValue && (
-                              <span className="text-xs">
-                                ({valuation.bnbValue} BNB)
-                              </span>
-                            )}
-                          </div>
-                        )}
-                      </div>
+                  <div key={token.address} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold">{token.symbol}</span>
+                      <span className="text-xs text-muted-foreground font-mono">
+                        {token.address.slice(0, 6)}...{token.address.slice(-4)}
+                      </span>
                     </div>
-                    {token.error && (
-                      <Alert variant="destructive" className="py-2">
-                        <AlertCircle className="h-4 w-4" />
-                        <AlertDescription className="text-sm">{token.error}</AlertDescription>
-                      </Alert>
-                    )}
+                    <div className="text-right">
+                      <div className="font-mono font-semibold">{token.balance}</div>
+                      {valuation && !isLoadingPrices && (
+                        <div className="text-xs text-muted-foreground flex items-center gap-1 justify-end">
+                          <TrendingUp className="h-3 w-3" />
+                          {valuation.usdValue && `$${valuation.usdValue}`}
+                          {valuation.bnbValue && ` (${valuation.bnbValue} BNB)`}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 );
               })}
@@ -265,11 +235,31 @@ export function BalanceView({
         )}
 
         {tokenBalances.length === 0 && (
-          <div className="text-center py-8 text-muted-foreground">
-            <Coins className="h-12 w-12 mx-auto mb-3 opacity-50" />
-            <p className="text-sm">No tokens being watched</p>
-            <p className="text-xs mt-1">Add tokens to track their balances</p>
+          <div className="text-center py-4 text-muted-foreground text-sm">
+            No token balances to display
           </div>
+        )}
+
+        {/* Metadata Cache Info */}
+        {metadataCacheSize > 0 && onClearMetadataCache && (
+          <>
+            <Separator />
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <Database className="h-3 w-3" />
+                <span>{metadataCacheSize} token{metadataCacheSize !== 1 ? 's' : ''} cached</span>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleClearCache}
+                className="h-6 text-xs"
+              >
+                <X className="h-3 w-3 mr-1" />
+                Clear Cache
+              </Button>
+            </div>
+          </>
         )}
       </CardContent>
     </Card>

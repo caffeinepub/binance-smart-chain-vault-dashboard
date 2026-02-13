@@ -1,11 +1,11 @@
 # Specification
 
 ## Summary
-**Goal:** Fix the Dashboard so wallet connection/wrong-network guidance is always visible when needed, and prevent Vault Balances from getting stuck in an infinite refresh/loading state.
+**Goal:** Make wallet connect prompts consistently visible on the Dashboard and ensure vault balances reliably refresh after connect, network/account changes, and manual refresh.
 
 **Planned changes:**
-- Update the Dashboard rendering logic to always show the existing WalletConnect UI when (a) no wallet is connected or (b) the connected wallet is on a non-BSC network (chainId != 56), and hide/disable balances and vault operation panels until on BSC Mainnet.
-- Adjust Vault Balances fetching/refresh behavior to skip polling/refresh when chainId != 56 and show a clear English error instructing the user to switch to BSC.
-- Harden Vault Balances refresh/polling state management so `isRefreshing` cannot remain true indefinitely, overlapping fetches are handled safely, and stalled RPC calls time out into a visible error state.
+- Adjust Dashboard rendering logic so the WalletConnect UI (or a clear loading state in the same area) is shown whenever the user is disconnected, Web3 is initializing, or the wallet is connected to a non-BSC network (chainId != 56); hide balances/operations panels in wrong-network mode.
+- Fix vault balance refresh flow to always resolve (success or error) and to update balances after wallet connect, account change, chain change, and manual refresh; ensure manual refresh does not no-op when a polling fetch is in-flight (await/coalesce and then update state).
+- Improve Web3 provider event handling (EIP-1193: accountsChanged, chainChanged, connect, disconnect) to keep account/chainId state in sync, reset state consistently on disconnect/empty accounts, and clean up listeners to avoid console errors.
 
-**User-visible outcome:** On the Dashboard, users always see a Connect Wallet button when disconnected, see a Wrong Network prompt (with switch-to-BSC action) when connected to the wrong chain, and Vault Balances no longer spins forever—balances display when available or a clear error appears within a bounded time.
+**User-visible outcome:** Users always see a clear “Connect Wallet” or “Wrong Network” prompt when appropriate, and vault balances load/refresh reliably after connecting, switching accounts/networks, or clicking Refresh—without getting stuck or requiring a hard reload.

@@ -1,35 +1,52 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-13T21:35:33.067Z",
+  "generatedAt": "2026-02-13T21:46:12.631Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
   },
   "requirements": {
-    "total": 2,
-    "implemented": 2,
+    "total": 3,
+    "implemented": 3,
     "items": [
       {
-        "id": "REQ-4",
-        "summary": "Ensure the wallet connection UI is always visible when the user is not connected OR when the wallet is connected to the wrong network (not BSC Mainnet, chainId 56). Specifically: on the Dashboard, render the existing WalletConnect component when (a) no account is connected or (b) an account is connected but chainId != 56, and hide/disable balance + vault operation panels until the user is on BSC.",
+        "id": "REQ-1",
+        "summary": "Ensure the wallet connection UI is reliably shown on the Dashboard whenever the user is not connected, Web3 is still initializing, or the connected wallet is on a non-BSC network (chainId != 56). This must prevent states where the user cannot see a visible \"Connect Wallet\" / \"Wrong Network\" prompt due to initialization timing or stale Web3 state.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/pages/Dashboard.tsx"
+          "frontend/src/pages/Dashboard.tsx",
+          "frontend/src/components/WalletConnect.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/pages/Dashboard.tsx"
+          "frontend/src/pages/Dashboard.tsx",
+          "frontend/src/components/WalletConnect.tsx"
         ]
       },
       {
-        "id": "REQ-5",
-        "summary": "Prevent Vault Balances from getting stuck in a perpetual refreshing/loading state and ensure balances either display or show a clear error. Update the balance fetching logic so that: (1) balance fetching is skipped with a clear, user-facing error message when the wallet is not on BSC (chainId != 56), (2) refresh/polling cannot leave `isRefreshing` true indefinitely, and (3) any stalled RPC fetches time out and resolve into an error state instead of spinning forever.",
+        "id": "REQ-2",
+        "summary": "Fix vault balance refresh so that it always completes (success or error) and reliably updates balances after wallet connect, account change, chain change, and manual refresh clicks. Manual refresh must not no-op due to an in-flight polling fetch; it should either (a) await the in-flight fetch and then run a new fetch, or (b) coalesce into a single fetch that updates state and resolves the refresh call.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/hooks/useVaultBalances.ts"
+          "frontend/src/hooks/useVaultBalances.ts",
+          "frontend/src/components/BalanceView.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/hooks/useVaultBalances.ts"
+          "frontend/src/hooks/useVaultBalances.ts",
+          "frontend/src/components/BalanceView.tsx"
+        ]
+      },
+      {
+        "id": "REQ-3",
+        "summary": "Improve Web3 provider event handling to keep account/chainId state in sync with the wallet provider and reduce stale states that can hide the connect UI or block refresh flows. Include handling for relevant EIP-1193 events (at minimum: accountsChanged, chainChanged, connect, disconnect) and ensure state is reset/updated consistently on each event.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/hooks/useWeb3.tsx",
+          "frontend/src/global.d.ts"
+        ],
+        "matchedFiles": [
+          "frontend/src/hooks/useWeb3.tsx",
+          "frontend/src/global.d.ts"
         ]
       }
     ]
@@ -39,7 +56,11 @@
     "feature_evidence.json",
     "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
+    "frontend/src/components/BalanceView.tsx",
+    "frontend/src/components/WalletConnect.tsx",
+    "frontend/src/global.d.ts",
     "frontend/src/hooks/useVaultBalances.ts",
+    "frontend/src/hooks/useWeb3.tsx",
     "frontend/src/pages/Dashboard.tsx",
     "project_state.json",
     "scratch/component-selection.json",

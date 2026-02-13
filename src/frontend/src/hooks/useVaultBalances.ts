@@ -46,8 +46,8 @@ export function useVaultBalances(enablePolling = true) {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [liveUpdatesEnabled, setLiveUpdatesEnabled] = useState(true);
 
-  // In-flight guard to prevent overlapping fetches
-  const isFetchingRef = useRef(false);
+  // Track in-flight fetch promise for coalescing
+  const inFlightFetchRef = useRef<Promise<void> | null>(null);
 
   // Check if on correct network
   const isOnBSC = chainId === BSC_CHAIN_ID;
@@ -170,11 +170,6 @@ export function useVaultBalances(enablePolling = true) {
 
   const fetchAllBalances = useCallback(
     async (isInitial = false) => {
-      // Prevent overlapping fetches
-      if (isFetchingRef.current) {
-        return;
-      }
-
       // Check if on correct network
       if (!isConnected) {
         setIsLoading(false);
@@ -186,30 +181,25 @@ export function useVaultBalances(enablePolling = true) {
       if (!isOnBSC) {
         setIsLoading(false);
         setIsRefreshing(false);
-        setError('Please switch to Binance Smart Chain (BSC) network to view balances.');
+        setError('Please switch to Binance Smart Chain (BSC) network');
         return;
       }
 
-      isFetchingRef.current = true;
-
-      if (isInitial) {
-        setIsLoading(true);
-      } else {
-        setIsRefreshing(true);
-      }
-
-      setError(null);
-
       try {
+        if (isInitial) {
+          setIsLoading(true);
+        } else {
+          setIsRefreshing(true);
+        }
+        setError(null);
+
         await Promise.all([fetchBnbBalance(), fetchTokenBalances()]);
+
         setLastUpdated(new Date());
-        setError(null); // Clear any previous errors on success
       } catch (err: any) {
         console.error('Failed to fetch balances:', err);
-        const errorMessage = err.message || 'Failed to fetch balances. Please check your network connection and try again.';
-        setError(errorMessage);
+        setError(err.message || 'Failed to fetch balances');
       } finally {
-        isFetchingRef.current = false;
         setIsLoading(false);
         setIsRefreshing(false);
       }
@@ -217,46 +207,81 @@ export function useVaultBalances(enablePolling = true) {
     [isConnected, isOnBSC, fetchBnbBalance, fetchTokenBalances]
   );
 
-  // Initial fetch - only when connected and on BSC
-  useEffect(() => {
-    if (isConnected && isOnBSC) {
-      fetchAllBalances(true);
-    } else {
-      setIsLoading(false);
-      setIsRefreshing(false);
-      isFetchingRef.current = false;
-      
-      if (isConnected && !isOnBSC) {
-        setError('Please switch to Binance Smart Chain (BSC) network to view balances.');
-      } else {
-        setError(null);
+  /**
+   * Manual refresh with coalescing:
+   * - If a fetch is in progress, await it and then trigger a new fetch
+   * - This ensures manual refresh always completes with updated data
+   */
+  const refetch = useCallback(async () => {
+    // If there's an in-flight fetch, await it first
+    if (inFlightFetchRef.current) {
+      try {
+        await inFlightFetchRef.current;
+      } catch (err) {
+        // Ignore errors from the in-flight fetch
       }
     }
-  }, [isConnected, isOnBSC, fetchAllBalances]);
 
-  // Polling - only when enabled, connected, and on BSC
-  useEffect(() => {
-    if (!liveUpdatesEnabled || !isConnected || !isOnBSC || !enablePolling) return;
+    // Now trigger a new fetch
+    const fetchPromise = fetchAllBalances(false);
+    inFlightFetchRef.current = fetchPromise;
 
-    const interval = setInterval(() => {
-      fetchAllBalances(false);
-    }, POLL_INTERVAL);
-
-    return () => clearInterval(interval);
-  }, [liveUpdatesEnabled, isConnected, isOnBSC, enablePolling, fetchAllBalances]);
-
-  // Reset states when disconnected or wrong network
-  useEffect(() => {
-    if (!isConnected || !isOnBSC) {
-      setIsRefreshing(false);
-      setIsLoading(false);
-      isFetchingRef.current = false;
+    try {
+      await fetchPromise;
+    } finally {
+      // Clear the in-flight reference when done
+      if (inFlightFetchRef.current === fetchPromise) {
+        inFlightFetchRef.current = null;
+      }
     }
-  }, [isConnected, isOnBSC]);
+  }, [fetchAllBalances]);
 
   const clearMetadataCache = useCallback(() => {
     clearCache();
   }, [clearCache]);
+
+  // Initial fetch on mount or when connection/chain changes
+  useEffect(() => {
+    if (isConnected && isOnBSC) {
+      const fetchPromise = fetchAllBalances(true);
+      inFlightFetchRef.current = fetchPromise;
+      fetchPromise.finally(() => {
+        if (inFlightFetchRef.current === fetchPromise) {
+          inFlightFetchRef.current = null;
+        }
+      });
+    } else {
+      setIsLoading(false);
+      setIsRefreshing(false);
+      if (!isConnected) {
+        setError(null);
+      } else if (!isOnBSC) {
+        setError('Please switch to Binance Smart Chain (BSC) network');
+      }
+    }
+  }, [isConnected, isOnBSC, fetchAllBalances]);
+
+  // Polling effect
+  useEffect(() => {
+    if (!enablePolling || !liveUpdatesEnabled || !isConnected || !isOnBSC) {
+      return;
+    }
+
+    const interval = setInterval(() => {
+      // Only poll if no manual refresh is in progress
+      if (!inFlightFetchRef.current) {
+        const fetchPromise = fetchAllBalances(false);
+        inFlightFetchRef.current = fetchPromise;
+        fetchPromise.finally(() => {
+          if (inFlightFetchRef.current === fetchPromise) {
+            inFlightFetchRef.current = null;
+          }
+        });
+      }
+    }, POLL_INTERVAL);
+
+    return () => clearInterval(interval);
+  }, [enablePolling, liveUpdatesEnabled, isConnected, isOnBSC, fetchAllBalances]);
 
   return {
     bnbBalance,
@@ -267,7 +292,7 @@ export function useVaultBalances(enablePolling = true) {
     isLoading,
     isRefreshing,
     error,
-    refetch: () => fetchAllBalances(false),
+    refetch,
     lastUpdated,
     liveUpdatesEnabled,
     setLiveUpdatesEnabled,

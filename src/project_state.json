@@ -4,30 +4,38 @@
   "summary": "New project",
   "architectural_notes": [],
   "known_issues": [
-    "Vault Balances: Refresh button keeps spinning and balances do not display.",
-    "UI: 'Connect wallet' button is not showing."
+    "Wallet connection issue still persists after deployment (Version 25).",
+    "Vault balance does not refresh correctly after wallet connect / update (issue persists after deployment)."
   ],
   "isFixRequest": true,
   "existing_features": [
     {
-      "id": "feature-ensure-the-wallet-connection-ui-is-always-visible-when-the-user-is-not-connected-or-when-the-wallet-is-connected-to-the-wrong-network-not-bsc-mainnet-chainid-56-specifically-on-the-dashboard-render-the-existing-walletconnect-component-when-a-no-account-is-connected-or-b-an-account-is-connected-but-chainid-56-and-hide-disable-balance-vault-operation-panels-until-the-user-is-on-bsc",
-      "title": "Ensure the wallet connection UI is always visible when the user is not connected OR when the wallet is connected to the wrong network (not BSC Mainnet, chainId 56). Specifically: on the Dashboard, render the existing WalletConnect component when (a) no account is connected or (b) an account is connected but chainId != 56, and hide/disable balance + vault operation panels until the user is on BSC.",
+      "id": "feature-ensure-the-wallet-connection-ui-is-reliably-shown-on-the-dashboard-whenever-the-user-is-not-connected-web3-is-still-initializing-or-the-connected-wallet-is-on-a-non-bsc-network-chainid-56-this-must-prevent-states-where-the-user-cannot-see-a-visible-connect-wallet-wrong-network-prompt-due-to-initialization-timing-or-stale-web3-state",
+      "title": "Ensure the wallet connection UI is reliably shown on the Dashboard whenever the user is not connected, Web3 is still initializing, or the connected wallet is on a non-BSC network (chainId != 56). This must prevent states where the user cannot see a visible \"Connect Wallet\" / \"Wrong Network\" prompt due to initialization timing or stale Web3 state.",
       "reqIds": [
-        "REQ-4"
+        "REQ-1"
       ],
       "version": 1
     },
     {
-      "id": "feature-prevent-vault-balances-from-getting-stuck-in-a-perpetual-refreshing-loading-state-and-ensure-balances-either-display-or-show-a-clear-error-update-the-balance-fetching-logic-so-that-1-balance-fetching-is-skipped-with-a-clear-user-facing-error-message-when-the-wallet-is-not-on-bsc-chainid-56-2-refresh-polling-cannot-leave-isrefreshing-true-indefinitely-and-3-any-stalled-rpc-fetches-time-out-and-resolve-into-an-error-state-instead-of-spinning-forever",
-      "title": "Prevent Vault Balances from getting stuck in a perpetual refreshing/loading state and ensure balances either display or show a clear error. Update the balance fetching logic so that: (1) balance fetching is skipped with a clear, user-facing error message when the wallet is not on BSC (chainId != 56), (2) refresh/polling cannot leave `isRefreshing` true indefinitely, and (3) any stalled RPC fetches time out and resolve into an error state instead of spinning forever.",
+      "id": "feature-fix-vault-balance-refresh-so-that-it-always-completes-success-or-error-and-reliably-updates-balances-after-wallet-connect-account-change-chain-change-and-manual-refresh-clicks-manual-refresh-must-not-no-op-due-to-an-in-flight-polling-fetch-it-should-either-a-await-the-in-flight-fetch-and-then-run-a-new-fetch-or-b-coalesce-into-a-single-fetch-that-updates-state-and-resolves-the-refresh-call",
+      "title": "Fix vault balance refresh so that it always completes (success or error) and reliably updates balances after wallet connect, account change, chain change, and manual refresh clicks. Manual refresh must not no-op due to an in-flight polling fetch; it should either (a) await the in-flight fetch and then run a new fetch, or (b) coalesce into a single fetch that updates state and resolves the refresh call.",
       "reqIds": [
-        "REQ-5"
+        "REQ-2"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-improve-web3-provider-event-handling-to-keep-account-chainid-state-in-sync-with-the-wallet-provider-and-reduce-stale-states-that-can-hide-the-connect-ui-or-block-refresh-flows-include-handling-for-relevant-eip-1193-events-at-minimum-accountschanged-chainchanged-connect-disconnect-and-ensure-state-is-reset-updated-consistently-on-each-event",
+      "title": "Improve Web3 provider event handling to keep account/chainId state in sync with the wallet provider and reduce stale states that can hide the connect UI or block refresh flows. Include handling for relevant EIP-1193 events (at minimum: accountsChanged, chainChanged, connect, disconnect) and ensure state is reset/updated consistently on each event.",
+      "reqIds": [
+        "REQ-3"
       ],
       "version": 1
     }
   ],
   "new_feature_requests": [],
-  "projectName": "Fix stuck Vault Balances refresh spinner and ensure Connect Wallet UI shows (wrong-network handling)",
+  "projectName": "Fix wallet connect visibility and vault balance refresh after connect",
   "clarification_mode": "instant",
   "clarification_rounds": 0
 }

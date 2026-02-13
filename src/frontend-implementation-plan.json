@@ -1,38 +1,71 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Fix Dashboard wrong-network wallet UI visibility and stop Vault Balances infinite refresh spinner",
+  "title": "Fix wallet connect visibility and vault balance refresh reliability",
   "requirements": [
     {
-      "id": "REQ-4",
-      "summary": "Show WalletConnect on Dashboard when disconnected or on the wrong network (chainId != 56) and hide balance/operations panels until on BSC.",
+      "id": "REQ-1",
+      "summary": "Make Dashboard always render a visible wallet connection area (or loading state) when disconnected, initializing, or on non-BSC chain, and never show balances/operations in those states.",
       "acceptanceCriteria": [
-        "If no wallet is connected, the Dashboard shows the WalletConnect card with a visible \"Connect Wallet\" button.",
-        "If a wallet is connected but chainId is not 56, the Dashboard shows the WalletConnect \"Wrong Network\" UI (including the \"Switch to BSC Network\" button) and does not show the balances/operations panels.",
-        "If a wallet is connected and chainId is 56, the WalletConnect UI is hidden and the balances/operations panels render as normal."
+        "With MetaMask installed and no account connected, the Dashboard renders the WalletConnect UI with a \"Connect Wallet\" button.",
+        "While Web3 is initializing (e.g., initial page load before eth_accounts/eth_chainId resolve), the Dashboard shows the WalletConnect area (or a clear loading state in the same area) rather than hiding it.",
+        "When an account is connected but chainId != 56, the Dashboard renders the WalletConnect UI in \"Wrong Network\" mode and does not render the balances/operations panels.",
+        "When the user switches back to chainId 56, the balances/operations panels become available without requiring a hard refresh."
       ],
       "file_operations": [
         {
           "path": "frontend/src/pages/Dashboard.tsx",
           "operation": "modify",
-          "description": "Update the Dashboard conditional rendering so the existing WalletConnect component is rendered when (a) no account is connected OR (b) an account is connected but chainId !== 56, and gate the balances + vault operations UI to only render when chainId === 56. Add a clear, user-facing message (e.g., Alert) in the wrong-network state explaining that balances/operations are unavailable until switching to BSC."
+          "description": "Update gating logic to explicitly account for Web3 initialization (useWeb3.isInitializing) and unknown chainId states so the WalletConnect area is always rendered when disconnected, initializing, chainId is unknown, or chainId != 56; ensure balances/operations panels only render when connected, chainId === 56, and not initializing."
+        },
+        {
+          "path": "frontend/src/components/WalletConnect.tsx",
+          "operation": "modify",
+          "description": "Enhance WalletConnect rendering to handle initialization/unknown chainId states (e.g., show a clear 'Checking wallet/network…' loading state when provider is present and Web3 is initializing) and to avoid showing a misleading 'Connect Wallet' prompt when an account is already present but chainId has not resolved yet."
         }
       ]
     },
     {
-      "id": "REQ-5",
-      "summary": "Make Vault Balances refresh/polling bounded and error-driven: skip on wrong network, enforce timeouts, and ensure isRefreshing cannot remain true indefinitely.",
+      "id": "REQ-2",
+      "summary": "Ensure vault balance fetching always completes and refresh works reliably after connect, account/chain changes, and manual refresh even during in-flight polling fetches.",
       "acceptanceCriteria": [
-        "When chainId != 56, Vault Balances does not poll/refresh and shows an English error message instructing the user to switch to BSC (no infinite spinner).",
-        "When clicking Refresh, the button spinner stops within a bounded time even if the RPC endpoint is slow/unresponsive, and an error alert is shown if the fetch fails/timeouts.",
-        "During auto-polling, overlapping fetches do not cause the UI to remain in a refreshing state; `isRefreshing` reliably returns to false after completion or failure.",
-        "If balance calls revert or return invalid data, the UI shows an error alert instead of silently showing no balances while continuing to spin."
+        "After clicking \"Connect Wallet\" (on BSC chainId 56), Vault Balances load and display without requiring a page reload.",
+        "Clicking the \"Refresh\" button in BalanceView always results in either (a) updated balances and \"Last updated\" time changing, or (b) a clear error message—never an indefinite spinner.",
+        "If polling is enabled and a poll fetch is currently in progress, clicking manual Refresh still results in a completed refresh sequence (it must not return immediately without updating).",
+        "When accounts are changed in the wallet, balances refresh for the new context and the UI does not get stuck in loading/refreshing state.",
+        "When chain is changed away from BSC and back to BSC, balances recover and can be refreshed successfully."
       ],
       "file_operations": [
         {
           "path": "frontend/src/hooks/useVaultBalances.ts",
           "operation": "modify",
-          "description": "Add chain gating using chainId from useWeb3 so balance fetching is skipped (and polling disabled) when chainId !== 56, setting a clear English error message and ensuring isLoading/isRefreshing are reset. Add a timeout wrapper around contract/RPC calls so stalled requests resolve into an error state within a bounded time and always release the in-flight/refresh flags in finally blocks. Improve token-balance fetching to surface per-token or aggregate errors (reverts/invalid data) into the hook's error state so the UI shows an error alert instead of silently dropping balances while appearing to refresh."
+          "description": "Replace the current isFetchingRef early-return behavior with an awaitable in-flight promise + coalescing/queueing strategy so refetch() never no-ops: manual refresh should await the current fetch and then trigger (or coalesce into) a new fetch that updates state and lastUpdated; ensure isLoading/isRefreshing are always cleared in all paths."
+        },
+        {
+          "path": "frontend/src/components/BalanceView.tsx",
+          "operation": "modify",
+          "description": "Adjust refresh button behavior to align with the updated refetch contract: ensure manual refresh awaits the hook's refresh promise and surfaces completion via updated 'Last updated' (and error UI when applicable) without leaving a spinner active indefinitely."
+        }
+      ]
+    },
+    {
+      "id": "REQ-3",
+      "summary": "Improve EIP-1193 provider event handling to keep account/chainId state in sync, reset state consistently, and avoid stale UI/refresh states.",
+      "acceptanceCriteria": [
+        "If the wallet disconnects or the user removes all accounts, the app returns to the WalletConnect screen (\"Connect Wallet\" visible).",
+        "If the wallet reconnects (provider emits connect) the app updates chainId and shows the correct WalletConnect mode (connected-on-wrong-network vs ready).",
+        "No console errors are thrown due to event listener cleanup or missing handlers when navigating/reloading the app."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/hooks/useWeb3.tsx",
+          "operation": "modify",
+          "description": "Implement robust EIP-1193 event handling for accountsChanged, chainChanged, connect, and disconnect with consistent state updates/resets; avoid removeAllListeners and instead add/remove specific handler functions to prevent cleanup-related issues and stale state; ensure chainId/account are refreshed on connect and cleared on disconnect/accounts empty."
+        },
+        {
+          "path": "frontend/src/global.d.ts",
+          "operation": "modify",
+          "description": "Extend the Window.ethereum type definitions as needed to include EIP-1193 connect/disconnect events and per-event listener removal (e.g., removeListener) so updated event handling in useWeb3 is type-safe."
         }
       ]
     }

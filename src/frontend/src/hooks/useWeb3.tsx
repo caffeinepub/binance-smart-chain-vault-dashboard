@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 
 interface Web3ContextType {
   account: string | null;
@@ -115,11 +115,11 @@ export function Web3Provider({ children }: { children: ReactNode }) {
     }
   };
 
-  const disconnectWallet = () => {
+  const disconnectWallet = useCallback(() => {
     setAccount(null);
     setChainId(null);
     setError(null);
-  };
+  }, []);
 
   /**
    * Extract a readable error message from nested provider error structures
@@ -330,7 +330,7 @@ export function Web3Provider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Initialize: check for existing connection
+  // Initialize: check for existing connection and set up event listeners
   useEffect(() => {
     const init = async () => {
       try {
@@ -350,20 +350,6 @@ export function Web3Provider({ children }: { children: ReactNode }) {
             });
             setChainId(parseInt(currentChainId, 16));
           }
-
-          // Listen for account changes
-          window.ethereum.on('accountsChanged', (accounts: string[]) => {
-            if (accounts.length === 0) {
-              disconnectWallet();
-            } else {
-              setAccount(accounts[0]);
-            }
-          });
-
-          // Listen for chain changes
-          window.ethereum.on('chainChanged', (chainId: string) => {
-            setChainId(parseInt(chainId, 16));
-          });
         } else {
           setHasMetaMask(false);
         }
@@ -375,15 +361,61 @@ export function Web3Provider({ children }: { children: ReactNode }) {
     };
 
     init();
+  }, []);
 
-    // Cleanup listeners
-    return () => {
-      if (window.ethereum) {
-        window.ethereum.removeAllListeners('accountsChanged');
-        window.ethereum.removeAllListeners('chainChanged');
+  // Set up event listeners after initialization
+  useEffect(() => {
+    if (!window.ethereum) return;
+
+    const handleAccountsChanged = (accounts: string[]) => {
+      if (accounts.length === 0) {
+        disconnectWallet();
+      } else {
+        setAccount(accounts[0]);
       }
     };
-  }, []);
+
+    const handleChainChanged = (chainIdHex: string) => {
+      setChainId(parseInt(chainIdHex, 16));
+    };
+
+    const handleConnect = async (connectInfo: { chainId: string }) => {
+      // Update chainId when wallet connects
+      setChainId(parseInt(connectInfo.chainId, 16));
+      
+      // Fetch accounts
+      try {
+        const accounts = await window.ethereum!.request({
+          method: 'eth_accounts',
+        });
+        if (accounts.length > 0) {
+          setAccount(accounts[0]);
+        }
+      } catch (err) {
+        console.error('Error fetching accounts on connect:', err);
+      }
+    };
+
+    const handleDisconnect = () => {
+      disconnectWallet();
+    };
+
+    // Add event listeners
+    window.ethereum.on('accountsChanged', handleAccountsChanged);
+    window.ethereum.on('chainChanged', handleChainChanged);
+    window.ethereum.on('connect', handleConnect);
+    window.ethereum.on('disconnect', handleDisconnect);
+
+    // Cleanup listeners on unmount
+    return () => {
+      if (window.ethereum && window.ethereum.removeListener) {
+        window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
+        window.ethereum.removeListener('chainChanged', handleChainChanged);
+        window.ethereum.removeListener('connect', handleConnect);
+        window.ethereum.removeListener('disconnect', handleDisconnect);
+      }
+    };
+  }, [disconnectWallet]);
 
   return (
     <Web3Context.Provider

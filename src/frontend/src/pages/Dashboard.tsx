@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Shield, Wallet, ArrowDownToLine, ArrowUpFromLine, Info } from 'lucide-react';
+import { Shield, Wallet, ArrowDownToLine, ArrowUpFromLine } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -16,7 +16,7 @@ import { APP_BRANDING } from '@/lib/appBranding';
 const BSC_CHAIN_ID = 56;
 
 export function Dashboard() {
-  const { isConnected, account, chainId, hasMetaMask, isMobile } = useWeb3();
+  const { isConnected, account, chainId, hasMetaMask, isMobile, isInitializing } = useWeb3();
   const {
     bnbBalance,
     bnbBalanceRaw,
@@ -38,7 +38,13 @@ export function Dashboard() {
 
   // Check if on correct network
   const isOnBSC = chainId === BSC_CHAIN_ID;
-  const shouldShowWalletConnect = !isConnected || !isOnBSC;
+  
+  // Show WalletConnect when:
+  // - Still initializing (to avoid blank screen)
+  // - Not connected
+  // - Connected but on wrong network
+  // - chainId is unknown (null) even if account exists
+  const shouldShowWalletConnect = isInitializing || !isConnected || !isOnBSC || chainId === null;
 
   return (
     <div className="min-h-screen bg-background">
@@ -58,11 +64,11 @@ export function Dashboard() {
           </p>
         </div>
 
-        {/* Wallet Connection - Show when not connected OR on wrong network */}
+        {/* Wallet Connection - Show when initializing, not connected, OR on wrong network */}
         {shouldShowWalletConnect && (
           <div className="max-w-md mx-auto">
             <WalletConnect />
-            {isConnected && !isOnBSC && (
+            {isConnected && chainId !== null && !isOnBSC && (
               <Alert className="mt-4">
                 <AlertDescription>
                   Please switch to Binance Smart Chain (BSC) network to view your vault balances and perform operations.
@@ -72,8 +78,8 @@ export function Dashboard() {
           </div>
         )}
 
-        {/* Main Content - Only show when connected AND on BSC */}
-        {isConnected && isOnBSC && (
+        {/* Main Content - Only show when connected AND on BSC AND not initializing */}
+        {!isInitializing && isConnected && isOnBSC && chainId !== null && (
           <div className="grid gap-6 lg:grid-cols-2">
             {/* Left Column: Balances */}
             <div className="space-y-6">

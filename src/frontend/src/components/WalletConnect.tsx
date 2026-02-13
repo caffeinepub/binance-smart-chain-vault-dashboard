@@ -1,16 +1,16 @@
 import { useState } from 'react';
-import { Wallet, AlertCircle, ExternalLink, Smartphone } from 'lucide-react';
+import { Wallet, AlertCircle, ExternalLink, Smartphone, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useWeb3 } from '@/hooks/useWeb3';
 
 export default function WalletConnect() {
-  const { connectWallet, switchToBSC, error, hasMetaMask, isMobile, chainId } = useWeb3();
+  const { connectWallet, switchToBSC, error, hasMetaMask, isMobile, chainId, account, isInitializing } = useWeb3();
   const [isConnecting, setIsConnecting] = useState(false);
   const [isSwitching, setIsSwitching] = useState(false);
 
   const BSC_CHAIN_ID = 56;
-  const isWrongNetwork = hasMetaMask && chainId !== null && chainId !== BSC_CHAIN_ID;
+  const isWrongNetwork = account && chainId !== null && chainId !== BSC_CHAIN_ID;
 
   const handleConnect = async () => {
     setIsConnecting(true);
@@ -31,6 +31,28 @@ export default function WalletConnect() {
       setIsSwitching(false);
     }
   };
+
+  // Show loading state while initializing
+  if (isInitializing) {
+    return (
+      <div className="space-y-4">
+        <div className="text-center space-y-4">
+          <div className="flex justify-center">
+            <div className="p-4 rounded-full bg-primary/10">
+              <Loader2 className="h-12 w-12 text-primary animate-spin" />
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold">Checking Wallet Connection</h2>
+            <p className="text-muted-foreground text-sm">
+              Please wait while we check for an existing wallet connection...
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // If wallet is not available on mobile, show mobile-specific instructions
   if (!hasMetaMask && isMobile) {
@@ -181,6 +203,29 @@ export default function WalletConnect() {
     );
   }
 
+  // If account exists but chainId is still null (shouldn't happen often but handle it)
+  if (account && chainId === null) {
+    return (
+      <div className="space-y-4">
+        <div className="text-center space-y-4">
+          <div className="flex justify-center">
+            <div className="p-4 rounded-full bg-primary/10">
+              <Loader2 className="h-12 w-12 text-primary animate-spin" />
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold">Detecting Network</h2>
+            <p className="text-muted-foreground text-sm">
+              Checking which network you're connected to...
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Default: show connect button
   return (
     <div className="space-y-4">
       <div className="text-center space-y-4">

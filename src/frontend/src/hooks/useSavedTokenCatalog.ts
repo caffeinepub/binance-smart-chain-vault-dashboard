@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { normalizeAddress } from '@/lib/evm';
+import { DEFAULT_BSC_TOKENS } from '@/lib/defaultBscTokens';
 
 const STORAGE_KEY = 'bsc-vault-token-catalog';
+const SEEDED_FLAG_KEY = 'bsc-vault-catalog-seeded';
 
 export interface TokenCatalogEntry {
   address: string; // normalized lowercase 0x format
@@ -25,8 +27,18 @@ export function useSavedTokenCatalog() {
   // Load from localStorage on mount
   useEffect(() => {
     try {
+      const seeded = localStorage.getItem(SEEDED_FLAG_KEY);
       const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
+      
+      if (!seeded) {
+        // First time: seed with default BSC token labels
+        const map = new Map<string, string>();
+        for (const token of DEFAULT_BSC_TOKENS) {
+          map.set(token.address, token.label);
+        }
+        setCatalog(map);
+        localStorage.setItem(SEEDED_FLAG_KEY, 'true');
+      } else if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed)) {
           const map = new Map<string, string>();
@@ -153,6 +165,13 @@ export function useSavedTokenCatalog() {
     }
   };
 
+  /**
+   * Get all catalog addresses
+   */
+  const getCatalogAddresses = (): string[] => {
+    return Array.from(catalog.keys());
+  };
+
   return {
     catalog,
     setTokenLabel,
@@ -160,6 +179,7 @@ export function useSavedTokenCatalog() {
     getTokenLabel,
     getDropdownOptions,
     hasCustomLabel,
+    getCatalogAddresses,
     isLoading,
   };
 }

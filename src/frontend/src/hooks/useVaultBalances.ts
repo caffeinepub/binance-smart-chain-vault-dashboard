@@ -1,390 +1,258 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useWeb3 } from './useWeb3';
-import { VAULT_ADDRESS, encodeCall, decodeResult } from '@/lib/contracts';
-import { formatUnits } from '@/lib/evm';
 import { useWatchedTokens } from './useWatchedTokens';
-import { decodeTokenSymbol } from '@/lib/evmAbiText';
 import { useTokenMetadataCache } from './useTokenMetadataCache';
+import { VAULT_ADDRESS, encodeCall } from '@/lib/contracts';
+import { formatUnits } from '@/lib/evm';
+import { decodeTokenSymbol } from '@/lib/evmAbiText';
 
-const POLL_INTERVAL = 10000; // 10 seconds
-const FETCH_TIMEOUT = 15000; // 15 seconds timeout for RPC calls
 const BSC_CHAIN_ID = 56;
 
-export interface TokenBalance {
+interface TokenBalance {
   address: string;
-  symbol: string;
   balance: string;
   balanceRaw: bigint;
+  symbol: string;
   decimals: number;
+  error?: string;
+  usedFallback?: boolean;
+}
+
+interface VaultBalancesResult {
+  bnbBalance: string;
+  bnbBalanceRaw: bigint;
+  bnbError: string | null;
+  bnbFallbackUsed: boolean;
+  tokenBalances: TokenBalance[];
+  isLoading: boolean;
+  isRefreshing: boolean;
+  error: string | null;
+  refetch: () => Promise<void>;
+  isPaused: boolean;
+  togglePause: () => void;
+  usedNativeFallback: boolean;
+  lastUpdated: Date | null;
+  liveUpdatesEnabled: boolean;
+  setLiveUpdatesEnabled: (enabled: boolean) => void;
+  clearMetadataCache: () => void;
+  metadataCacheSize: number;
+  hasWatchedTokens: boolean;
+  tokenErrorCount: number;
 }
 
 /**
- * Wraps a promise with a timeout
+ * Hook for fetching BNB and token balances with native balance fallback
+ * Stabilized effect triggering using previous-state refs
  */
-function withTimeout<T>(promise: Promise<T>, timeoutMs: number, errorMessage: string): Promise<T> {
-  return Promise.race([
-    promise,
-    new Promise<T>((_, reject) =>
-      setTimeout(() => reject(new Error(errorMessage)), timeoutMs)
-    ),
-  ]);
-}
-
-export function useVaultBalances(enablePolling = true) {
-  const { callContract, getNativeBalance, isConnected, chainId } = useWeb3();
+export function useVaultBalances(): VaultBalancesResult {
+  const { account, chainId, callContract, getNativeBalance } = useWeb3();
   const { tokens: watchedTokens } = useWatchedTokens();
-  const { get: getMetadata, set: setMetadata, cacheSize, clear: clearCache } = useTokenMetadataCache();
+  const { get: getMetadata, set: setMetadata, clear: clearCache, cacheSize } = useTokenMetadataCache();
 
-  const [bnbBalance, setBnbBalance] = useState<string>('0');
-  const [bnbBalanceRaw, setBnbBalanceRaw] = useState<bigint>(0n);
+  const [bnbBalance, setBnbBalance] = useState('0.0000');
+  const [bnbBalanceRaw, setBnbBalanceRaw] = useState(0n);
   const [bnbError, setBnbError] = useState<string | null>(null);
   const [bnbFallbackUsed, setBnbFallbackUsed] = useState(false);
   const [tokenBalances, setTokenBalances] = useState<TokenBalance[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [isPaused, setIsPaused] = useState(false);
   const [liveUpdatesEnabled, setLiveUpdatesEnabled] = useState(true);
+  const [usedNativeFallback, setUsedNativeFallback] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-  // Track in-flight fetch promise for coalescing
-  const inFlightFetchRef = useRef<Promise<void> | null>(null);
-  
-  // Keep last successful balances to avoid resetting on errors
-  const lastSuccessfulBnbRef = useRef<{ balance: string; balanceRaw: bigint }>({ balance: '0', balanceRaw: 0n });
-  const lastSuccessfulTokensRef = useRef<TokenBalance[]>([]);
+  // Track previous state to detect meaningful changes
+  const prevAccountRef = useRef<string | null>(null);
+  const prevChainIdRef = useRef<number | null>(null);
+  const prevWatchedTokensRef = useRef<string[]>([]);
 
-  // Track previous connection state to detect transitions
-  const prevConnectionStateRef = useRef<{ isConnected: boolean; chainId: number | null }>({
-    isConnected: false,
-    chainId: null,
-  });
-
-  // Check if on correct network - treat null as "detecting" not "wrong"
   const isOnBSC = chainId === BSC_CHAIN_ID;
-  const isDetectingNetwork = chainId === null && isConnected;
+  const isReady = !!account && isOnBSC;
 
-  const fetchBnbBalance = useCallback(async () => {
-    if (!isConnected || !isOnBSC) return;
+  const fetchBalances = async (isManualRefresh = false) => {
+    if (!isReady || (isPaused && !isManualRefresh) || (!liveUpdatesEnabled && !isManualRefresh)) return;
+
+    if (isManualRefresh) {
+      setIsRefreshing(true);
+    } else {
+      setIsLoading(true);
+    }
+    setError(null);
+    setBnbError(null);
+    setUsedNativeFallback(false);
+    setBnbFallbackUsed(false);
 
     try {
-      setBnbError(null);
-      setBnbFallbackUsed(false);
-
-      // Try contract method first
-      const callData = encodeCall('bnbBalance');
-      
+      // Try contract bnbBalance first
+      let bnbRaw: bigint;
       try {
-        const balanceHex = await withTimeout(
-          callContract(VAULT_ADDRESS, callData),
-          FETCH_TIMEOUT,
-          'Request timed out. Please check your network connection and try again.'
+        const bnbResult = await callContract(
+          VAULT_ADDRESS,
+          encodeCall('bnbBalance')
         );
-
-        const balance = decodeResult(balanceHex, 'uint256') as bigint;
-        const formatted = formatUnits(balance, 18);
-
-        setBnbBalanceRaw(balance);
-        setBnbBalance(formatted);
-        
-        // Store successful result
-        lastSuccessfulBnbRef.current = { balance: formatted, balanceRaw: balance };
-      } catch (contractError: any) {
-        // Contract call failed, try native balance fallback
-        console.warn('Contract bnbBalance call failed, using native balance fallback:', contractError);
-        
-        const nativeBalance = await withTimeout(
-          getNativeBalance(VAULT_ADDRESS),
-          FETCH_TIMEOUT,
-          'Native balance fetch timed out'
-        );
-        
-        const formatted = formatUnits(nativeBalance, 18);
-        
-        setBnbBalanceRaw(nativeBalance);
-        setBnbBalance(formatted);
+        bnbRaw = bnbResult && bnbResult !== '0x' ? BigInt(bnbResult) : 0n;
+      } catch (contractError) {
+        console.warn('Contract bnbBalance failed, using native balance fallback:', contractError);
+        bnbRaw = await getNativeBalance(VAULT_ADDRESS);
+        setUsedNativeFallback(true);
         setBnbFallbackUsed(true);
-        
-        // Store successful result
-        lastSuccessfulBnbRef.current = { balance: formatted, balanceRaw: nativeBalance };
-      }
-    } catch (err: any) {
-      console.error('Failed to fetch BNB balance:', err);
-      const errorMsg = err.message || 'Failed to fetch BNB balance';
-      setBnbError(errorMsg);
-      
-      // Keep last known balance instead of resetting to 0
-      if (lastSuccessfulBnbRef.current.balance !== '0') {
-        setBnbBalance(lastSuccessfulBnbRef.current.balance);
-        setBnbBalanceRaw(lastSuccessfulBnbRef.current.balanceRaw);
-      }
-      
-      throw err; // Re-throw to be caught by fetchAllBalances
-    }
-  }, [callContract, getNativeBalance, isConnected, isOnBSC]);
-
-  const fetchTokenMetadata = useCallback(
-    async (tokenAddress: string): Promise<{ symbol: string; decimals: number }> => {
-      // Check cache first
-      const cached = getMetadata(tokenAddress);
-      if (cached) {
-        return cached;
       }
 
-      try {
-        // Fetch symbol with timeout
-        const symbolData = await withTimeout(
-          callContract(tokenAddress, '0x95d89b41'),
-          FETCH_TIMEOUT,
-          'Token metadata fetch timed out'
-        );
-        const symbol = decodeTokenSymbol(symbolData, 'TOKEN');
+      const bnbFormatted = formatUnits(bnbRaw, 18);
+      setBnbBalanceRaw(bnbRaw);
+      setBnbBalance(bnbFormatted);
 
-        // Fetch decimals with timeout
-        const decimalsData = await withTimeout(
-          callContract(tokenAddress, '0x313ce567'),
-          FETCH_TIMEOUT,
-          'Token decimals fetch timed out'
-        );
-        
-        // Decode decimals properly as uint8 (still returned as uint256 in ABI)
-        const decimalsRaw = decodeResult(decimalsData, 'uint256') as bigint;
-        const decimals = Number(decimalsRaw);
+      // Fetch token balances
+      const balances: TokenBalance[] = [];
 
-        const metadata = { symbol, decimals };
-        setMetadata(tokenAddress, metadata);
-        return metadata;
-      } catch (err) {
-        console.error(`Failed to fetch metadata for ${tokenAddress}:`, err);
-        return { symbol: 'UNKNOWN', decimals: 18 };
-      }
-    },
-    [callContract, getMetadata, setMetadata]
-  );
+      for (const tokenAddress of watchedTokens) {
+        try {
+          // Check metadata cache first
+          let metadata = getMetadata(tokenAddress);
 
-  const fetchTokenBalances = useCallback(async () => {
-    if (!isConnected || !isOnBSC || watchedTokens.length === 0) {
-      setTokenBalances([]);
-      lastSuccessfulTokensRef.current = [];
-      return;
-    }
-
-    try {
-      const balances = await Promise.all(
-        watchedTokens.map(async (tokenAddress) => {
-          try {
-            // Use encodeCall for proper parameter encoding
-            const callData = encodeCall('balanceOf', [
-              { type: 'address', value: VAULT_ADDRESS }
+          // If not cached, fetch metadata
+          if (!metadata) {
+            const [symbolResult, decimalsResult] = await Promise.allSettled([
+              callContract(tokenAddress, encodeCall('symbol')),
+              callContract(tokenAddress, encodeCall('decimals')),
             ]);
-            
-            // Fetch balance with timeout
-            const balanceData = await withTimeout(
-              callContract(tokenAddress, callData),
-              FETCH_TIMEOUT,
-              'Token balance fetch timed out'
-            );
-            
-            const balanceRaw = decodeResult(balanceData, 'uint256') as bigint;
 
-            // Fetch metadata (with caching)
-            const { symbol, decimals } = await fetchTokenMetadata(tokenAddress);
+            const symbol = symbolResult.status === 'fulfilled'
+              ? decodeTokenSymbol(symbolResult.value, '')
+              : '';
 
-            const balance = formatUnits(balanceRaw, decimals);
+            const decimals = decimalsResult.status === 'fulfilled' && decimalsResult.value !== '0x'
+              ? parseInt(decimalsResult.value, 16)
+              : 18;
 
-            return {
-              address: tokenAddress,
-              symbol,
-              balance,
-              balanceRaw,
-              decimals,
+            // Validate decimals range
+            const validDecimals = decimals >= 0 && decimals <= 77 ? decimals : 18;
+
+            // Ensure symbol is non-empty
+            const validSymbol = symbol && symbol.trim() ? symbol : 'TOKEN';
+
+            metadata = {
+              symbol: validSymbol,
+              decimals: validDecimals,
             };
-          } catch (err) {
-            console.error(`Failed to fetch balance for ${tokenAddress}:`, err);
-            
-            // Try to preserve last known balance for this specific token
-            const lastKnown = lastSuccessfulTokensRef.current.find(
-              t => t.address.toLowerCase() === tokenAddress.toLowerCase()
-            );
-            
-            return lastKnown || null;
-          }
-        })
-      );
 
-      const validBalances = balances.filter((b): b is TokenBalance => b !== null);
-      setTokenBalances(validBalances);
-      
-      // Merge with last successful to preserve balances for tokens that succeeded
-      const mergedBalances = [...validBalances];
-      for (const lastToken of lastSuccessfulTokensRef.current) {
-        if (!mergedBalances.find(t => t.address.toLowerCase() === lastToken.address.toLowerCase())) {
-          mergedBalances.push(lastToken);
+            // Cache for future use
+            setMetadata(tokenAddress, metadata);
+          }
+
+          // Fetch balance from vault - with fallback to ERC20 balanceOf
+          let balanceRaw: bigint;
+          let usedFallback = false;
+          let balanceError: string | undefined;
+
+          try {
+            // Try vault's tokenBalance method first
+            const balanceData = encodeCall('tokenBalance', [
+              { type: 'address', value: tokenAddress },
+            ]);
+            const balanceResult = await callContract(VAULT_ADDRESS, balanceData);
+            balanceRaw = balanceResult && balanceResult !== '0x'
+              ? BigInt(balanceResult)
+              : 0n;
+          } catch (vaultError) {
+            console.warn(`Vault tokenBalance failed for ${tokenAddress}, trying ERC20 balanceOf fallback:`, vaultError);
+            
+            try {
+              // Fallback: call balanceOf(vaultAddress) on the token contract
+              const balanceOfData = encodeCall('balanceOf', [
+                { type: 'address', value: VAULT_ADDRESS },
+              ]);
+              const balanceResult = await callContract(tokenAddress, balanceOfData);
+              balanceRaw = balanceResult && balanceResult !== '0x'
+                ? BigInt(balanceResult)
+                : 0n;
+              usedFallback = true;
+            } catch (fallbackError) {
+              console.error(`Both vault and ERC20 balance fetch failed for ${tokenAddress}:`, fallbackError);
+              // Set balance to 0 and mark error
+              balanceRaw = 0n;
+              balanceError = 'Balance unavailable';
+            }
+          }
+
+          const balanceFormatted = formatUnits(balanceRaw, metadata.decimals);
+
+          balances.push({
+            address: tokenAddress,
+            balance: balanceFormatted,
+            balanceRaw,
+            symbol: metadata.symbol,
+            decimals: metadata.decimals,
+            error: balanceError,
+            usedFallback,
+          });
+        } catch (tokenError: any) {
+          console.warn(`Failed to process token ${tokenAddress}:`, tokenError);
+          // Still add the token with error state
+          balances.push({
+            address: tokenAddress,
+            balance: '0.0000',
+            balanceRaw: 0n,
+            symbol: 'TOKEN',
+            decimals: 18,
+            error: 'Failed to load',
+          });
         }
       }
-      
-      lastSuccessfulTokensRef.current = mergedBalances;
 
-      // If some balances failed but not all, don't throw
-      if (validBalances.length === 0 && watchedTokens.length > 0) {
-        throw new Error('Failed to fetch any token balances');
-      }
-    } catch (err: any) {
-      console.error('Failed to fetch token balances:', err);
-      
-      // Keep last known token balances on error
-      if (lastSuccessfulTokensRef.current.length > 0) {
-        setTokenBalances(lastSuccessfulTokensRef.current);
-      }
-      
-      throw err; // Re-throw to be caught by fetchAllBalances
-    }
-  }, [callContract, isConnected, isOnBSC, watchedTokens, fetchTokenMetadata]);
-
-  // Create a stable fetch function using refs to avoid dependency churn
-  const fetchAllBalancesRef = useRef<((isInitial: boolean) => Promise<void>) | null>(null);
-  
-  fetchAllBalancesRef.current = async (isInitial = false) => {
-    // Don't fetch if not connected
-    if (!isConnected) {
-      setIsLoading(false);
-      setIsRefreshing(false);
-      setError(null);
-      return;
-    }
-
-    // If detecting network, show loading but don't error
-    if (isDetectingNetwork) {
-      if (isInitial) {
-        setIsLoading(true);
-      }
-      setError(null);
-      return;
-    }
-
-    // If on wrong network, set error but don't reset balances
-    if (!isOnBSC) {
-      setIsLoading(false);
-      setIsRefreshing(false);
-      setError('Please switch to Binance Smart Chain (BSC) network');
-      return;
-    }
-
-    try {
-      if (isInitial) {
-        setIsLoading(true);
-      } else {
-        setIsRefreshing(true);
-      }
-      setError(null);
-
-      await Promise.all([fetchBnbBalance(), fetchTokenBalances()]);
-
+      setTokenBalances(balances);
       setLastUpdated(new Date());
     } catch (err: any) {
-      console.error('Failed to fetch balances:', err);
-      // Set error but keep last known balances visible
-      setError(err.message || 'Failed to fetch balances');
+      console.error('Error fetching vault balances:', err);
+      setError(err.message || 'Failed to fetch vault balances');
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
     }
   };
 
-  // Stable wrapper that calls the ref
-  const fetchAllBalances = useCallback((isInitial = false) => {
-    if (fetchAllBalancesRef.current) {
-      return fetchAllBalancesRef.current(isInitial);
-    }
-    return Promise.resolve();
-  }, []);
+  const togglePause = () => {
+    setIsPaused(prev => !prev);
+  };
 
-  /**
-   * Manual refresh with coalescing:
-   * - If a fetch is in progress, await it and then trigger a new fetch
-   * - This ensures manual refresh always completes with updated data
-   */
-  const refetch = useCallback(async () => {
-    // If there's an in-flight fetch, await it first
-    if (inFlightFetchRef.current) {
-      try {
-        await inFlightFetchRef.current;
-      } catch (err) {
-        // Ignore errors from the in-flight fetch
-      }
-    }
+  const handleRefetch = async () => {
+    await fetchBalances(true);
+  };
 
-    // Now trigger a new fetch
-    const fetchPromise = fetchAllBalances(false);
-    inFlightFetchRef.current = fetchPromise;
-
-    try {
-      await fetchPromise;
-    } finally {
-      // Clear the in-flight reference when done
-      if (inFlightFetchRef.current === fetchPromise) {
-        inFlightFetchRef.current = null;
-      }
-    }
-  }, [fetchAllBalances]);
-
-  const clearMetadataCache = useCallback(() => {
+  const clearMetadataCache = () => {
     clearCache();
-  }, [clearCache]);
+  };
 
-  // Initial fetch on mount or when connection/chain changes (only on meaningful transitions)
+  // Effect: Fetch on meaningful state changes
   useEffect(() => {
-    const prevState = prevConnectionStateRef.current;
-    const currentState = { isConnected, chainId };
+    const accountChanged = prevAccountRef.current !== account;
+    const chainChanged = prevChainIdRef.current !== chainId;
+    const tokensChanged = JSON.stringify(prevWatchedTokensRef.current) !== JSON.stringify(watchedTokens);
 
-    // Detect meaningful state transitions
-    const justConnected = !prevState.isConnected && isConnected;
-    const chainSwitchedToBSC = prevState.chainId !== null && prevState.chainId !== BSC_CHAIN_ID && chainId === BSC_CHAIN_ID;
-    const networkDetected = prevState.chainId === null && chainId !== null;
+    if (accountChanged || chainChanged || tokensChanged) {
+      prevAccountRef.current = account;
+      prevChainIdRef.current = chainId;
+      prevWatchedTokensRef.current = watchedTokens;
 
-    // Update the ref for next comparison
-    prevConnectionStateRef.current = currentState;
-
-    // Only fetch on meaningful transitions or initial mount when already connected to BSC
-    if (isConnected && isOnBSC && (justConnected || chainSwitchedToBSC || networkDetected)) {
-      const fetchPromise = fetchAllBalances(true);
-      inFlightFetchRef.current = fetchPromise;
-      fetchPromise.finally(() => {
-        if (inFlightFetchRef.current === fetchPromise) {
-          inFlightFetchRef.current = null;
-        }
-      });
-    } else if (!isConnected) {
-      setIsLoading(false);
-      setIsRefreshing(false);
-      setError(null);
-    } else if (isConnected && !isOnBSC && !isDetectingNetwork) {
-      setIsLoading(false);
-      setIsRefreshing(false);
-      setError('Please switch to Binance Smart Chain (BSC) network');
+      if (isReady && !isPaused && liveUpdatesEnabled) {
+        fetchBalances();
+      }
     }
-  }, [isConnected, chainId, isOnBSC, isDetectingNetwork, fetchAllBalances]);
+  }, [account, chainId, watchedTokens, isReady, isPaused, liveUpdatesEnabled]);
 
-  // Polling effect - only poll when connected, on BSC, and live updates enabled
+  // Effect: Polling (every 30 seconds)
   useEffect(() => {
-    if (!enablePolling || !liveUpdatesEnabled || !isConnected || !isOnBSC) {
-      return;
-    }
+    if (!isReady || isPaused || !liveUpdatesEnabled) return;
 
     const interval = setInterval(() => {
-      // Only poll if no manual refresh is in progress
-      if (!inFlightFetchRef.current) {
-        const fetchPromise = fetchAllBalances(false);
-        inFlightFetchRef.current = fetchPromise;
-        fetchPromise.finally(() => {
-          if (inFlightFetchRef.current === fetchPromise) {
-            inFlightFetchRef.current = null;
-          }
-        });
-      }
-    }, POLL_INTERVAL);
+      fetchBalances();
+    }, 30000);
 
     return () => clearInterval(interval);
-  }, [enablePolling, liveUpdatesEnabled, isConnected, isOnBSC, fetchAllBalances]);
+  }, [isReady, isPaused, liveUpdatesEnabled, watchedTokens]);
+
+  const tokenErrorCount = tokenBalances.filter(t => t.error).length;
 
   return {
     bnbBalance,
@@ -395,11 +263,16 @@ export function useVaultBalances(enablePolling = true) {
     isLoading,
     isRefreshing,
     error,
-    refetch,
+    refetch: handleRefetch,
+    isPaused,
+    togglePause,
+    usedNativeFallback,
     lastUpdated,
     liveUpdatesEnabled,
     setLiveUpdatesEnabled,
     clearMetadataCache,
     metadataCacheSize: cacheSize,
+    hasWatchedTokens: watchedTokens.length > 0,
+    tokenErrorCount,
   };
 }

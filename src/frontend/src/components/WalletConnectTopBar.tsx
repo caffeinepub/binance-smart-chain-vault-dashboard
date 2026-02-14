@@ -90,11 +90,11 @@ export function WalletConnectTopBar() {
     return (
       <div className="flex items-center gap-2">
         <Badge variant="outline" className="gap-1.5 bg-primary/10 border-primary/20">
-          <CheckCircle2 className="h-3 w-3 text-primary" />
-          <span className="hidden sm:inline">
+          <CheckCircle2 className="h-3 w-3 text-green-600 dark:text-green-500" />
+          <span className="hidden sm:inline text-green-600 dark:text-green-500">
             {account.slice(0, 6)}...{account.slice(-4)}
           </span>
-          <span className="sm:hidden">Connected</span>
+          <span className="sm:hidden text-green-600 dark:text-green-500">Connected</span>
         </Badge>
       </div>
     );

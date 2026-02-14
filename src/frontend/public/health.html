@@ -141,6 +141,18 @@
             margin: 4px 0;
         }
     </style>
+    <script>
+        // Dynamically update build info from environment or defaults
+        window.addEventListener('DOMContentLoaded', () => {
+            const buildVersion = 'v24';
+            const buildDate = '2026-02-13';
+            const buildId = buildVersion + '-' + buildDate;
+            
+            document.getElementById('build-version').textContent = buildVersion;
+            document.getElementById('build-id').textContent = buildId;
+            document.getElementById('timestamp').textContent = new Date().toISOString();
+        });
+    </script>
 </head>
 <body>
     <div class="container">
@@ -156,11 +168,11 @@
         <div class="info-grid">
             <div class="info-item">
                 <span class="info-label">Build Version:</span>
-                <span class="info-value">v23</span>
+                <span class="info-value" id="build-version">v24</span>
             </div>
             <div class="info-item">
                 <span class="info-label">Build ID:</span>
-                <span class="info-value">v23-2026-02-13</span>
+                <span class="info-value" id="build-id">v24-2026-02-13</span>
             </div>
             <div class="info-item">
                 <span class="info-label">Deployment Status:</span>
@@ -169,6 +181,10 @@
             <div class="info-item">
                 <span class="info-label">Network:</span>
                 <span class="info-value">Binance Smart Chain</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Check Time:</span>
+                <span class="info-value" id="timestamp">-</span>
             </div>
         </div>
         

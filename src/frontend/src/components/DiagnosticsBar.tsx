@@ -94,24 +94,26 @@ Timestamp: ${diagnostics.timestamp}`;
             </Badge>
           )}
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={copyDiagnostics}
-          className="h-7 gap-1.5 text-xs"
-        >
-          {copied ? (
-            <>
-              <Check className="h-3 w-3" />
-              Copied
-            </>
-          ) : (
-            <>
-              <Copy className="h-3 w-3" />
-              Copy diagnostics
-            </>
-          )}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={copyDiagnostics}
+            className="h-7 gap-1.5 text-xs"
+          >
+            {copied ? (
+              <>
+                <Check className="h-3 w-3" />
+                Copied
+              </>
+            ) : (
+              <>
+                <Copy className="h-3 w-3" />
+                Copy diagnostics
+              </>
+            )}
+          </Button>
+        </div>
       </div>
 
       <Separator />

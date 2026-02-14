@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ArrowUpFromLine, Loader2, History } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,11 +7,12 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { useVaultOperations } from '@/hooks/useVaultOperations';
+import { useVaultInfo } from '@/hooks/useVaultInfo';
 import { TokenSelectorInput } from '@/components/TokenSelectorInput';
+import { WithdrawalDestinationSelector } from '@/components/WithdrawalDestinationSelector';
 import TransactionHistory from '@/components/TransactionHistory';
 import { useTxHistory } from '@/hooks/useTxHistory';
 import { toast } from 'sonner';
-import { useWeb3 } from '@/hooks/useWeb3';
 
 interface WithdrawFormProps {
   onSuccess?: () => void;
@@ -20,13 +21,21 @@ interface WithdrawFormProps {
 export function WithdrawForm({ onSuccess }: WithdrawFormProps) {
   const [amount, setAmount] = useState('');
   const [tokenAddress, setTokenAddress] = useState('');
+  const [recipientAddress, setRecipientAddress] = useState('');
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
 
   const { withdrawBNB, withdrawToken } = useVaultOperations();
+  const { owner, isLoading: isLoadingOwner } = useVaultInfo();
   const { addEntry } = useTxHistory();
-  const { account } = useWeb3();
+
+  // Initialize recipient with owner address when available
+  useEffect(() => {
+    if (owner && !recipientAddress) {
+      setRecipientAddress(owner);
+    }
+  }, [owner]);
 
   const handleWithdrawBnb = async () => {
     if (!amount || parseFloat(amount) <= 0) {
@@ -34,8 +43,8 @@ export function WithdrawForm({ onSuccess }: WithdrawFormProps) {
       return;
     }
 
-    if (!account) {
-      setError('Wallet not connected');
+    if (!recipientAddress || !recipientAddress.startsWith('0x')) {
+      setError('Please select a valid withdrawal destination');
       return;
     }
 
@@ -43,7 +52,7 @@ export function WithdrawForm({ onSuccess }: WithdrawFormProps) {
     setError(null);
 
     try {
-      const txHash = await withdrawBNB(account, amount);
+      const txHash = await withdrawBNB(recipientAddress, amount);
       toast.success('BNB withdrawal initiated');
 
       // Add to history
@@ -71,8 +80,8 @@ export function WithdrawForm({ onSuccess }: WithdrawFormProps) {
       return;
     }
 
-    if (!account) {
-      setError('Wallet not connected');
+    if (!recipientAddress || !recipientAddress.startsWith('0x')) {
+      setError('Please select a valid withdrawal destination');
       return;
     }
 
@@ -80,7 +89,7 @@ export function WithdrawForm({ onSuccess }: WithdrawFormProps) {
     setError(null);
 
     try {
-      const txHash = await withdrawToken(tokenAddress, account, amount);
+      const txHash = await withdrawToken(tokenAddress, recipientAddress, amount);
       toast.success('Token withdrawal initiated');
 
       // Use shortened address as fallback label for history
@@ -109,6 +118,16 @@ export function WithdrawForm({ onSuccess }: WithdrawFormProps) {
         </Alert>
       )}
 
+      {/* Withdrawal Destination Selector */}
+      <WithdrawalDestinationSelector
+        value={recipientAddress}
+        onChange={setRecipientAddress}
+        ownerAddress={owner}
+        disabled={isWithdrawing || isLoadingOwner}
+      />
+
+      <Separator />
+
       <Tabs defaultValue="bnb" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="bnb">BNB</TabsTrigger>
@@ -130,7 +149,7 @@ export function WithdrawForm({ onSuccess }: WithdrawFormProps) {
           </div>
           <Button
             onClick={handleWithdrawBnb}
-            disabled={isWithdrawing || !amount}
+            disabled={isWithdrawing || !amount || !recipientAddress}
             className="w-full gap-2 bg-gradient-to-r from-primary to-accent hover:opacity-90"
           >
             {isWithdrawing ? (
@@ -169,7 +188,7 @@ export function WithdrawForm({ onSuccess }: WithdrawFormProps) {
           </div>
           <Button
             onClick={handleWithdrawToken}
-            disabled={isWithdrawing || !amount || !tokenAddress}
+            disabled={isWithdrawing || !amount || !tokenAddress || !recipientAddress}
             className="w-full gap-2 bg-gradient-to-r from-primary to-accent hover:opacity-90"
           >
             {isWithdrawing ? (

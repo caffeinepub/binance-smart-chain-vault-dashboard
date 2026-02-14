@@ -1,53 +1,96 @@
 {
   "kind": "build_request",
-  "title": "Remove ZIP build export from the app",
+  "title": "Add in-app downloadable ZIP bundle export of the project",
   "priority": "normal",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "Remove the ZIP build export feature from the UI by deleting the \"Build Export\" section in the Diagnostics bar, including the download button, progress text, and the deployment instructions that reference downloading/extracting a ZIP.",
+      "text": "Implement a user-accessible control in the UI to download a ZIP bundle of the project source (at minimum include backend/ and frontend/ source files that are present in the repository) as a file download in the browser.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "recent-messages"
+          "msg-1"
         ],
         "quotes": [
-          "pls remove zip file from it"
+          "do it"
         ]
       },
       "acceptanceCriteria": [
-        "In the Diagnostics bar, there is no \"Build Export\" card/section visible.",
-        "No user-facing text anywhere in the app mentions downloading a ZIP, extracting a ZIP, or \"Download Frontend Build (ZIP)\".",
-        "The rest of the Diagnostics bar (build info, copy diagnostics, performance check) still renders and functions as before."
+        "There is a visible UI control (e.g., button/menu item) labeled in English (e.g., \"Download project ZIP\") that a user can click.",
+        "Clicking the control triggers a browser file download of a .zip file without navigating away from the app.",
+        "The downloaded ZIP filename includes the app build identifier (e.g., using getDeployedBuildId()/getBuildIdentifier) to distinguish builds.",
+        "The ZIP contains a clear top-level folder structure that includes at least \"backend/\" and \"frontend/\" directories with source files inside (not an empty ZIP).",
+        "If ZIP generation fails, the UI shows an English error toast/message and does not crash the app."
       ]
     },
     {
       "id": "REQ-2",
-      "text": "Remove the underlying ZIP export implementation so the frontend no longer generates or downloads ZIP files, including removing the usage of exportFrontendBuild/downloadBlob and any ZIP writer logic that is only used for this export.",
+      "text": "Implement the ZIP generation utilities currently stubbed in the codebase so the frontend can create a valid ZIP file client-side from a set of in-repo source files.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "recent-messages"
+          "msg-1"
         ],
         "quotes": [
-          "pls remove zip file from it"
+          "do it"
         ]
       },
       "acceptanceCriteria": [
-        "The frontend codebase has no runtime path that generates a .zip Blob for build export.",
-        "DiagnosticsBar no longer imports or references ZIP-export-related functions/modules (e.g., '@/lib/buildExport').",
-        "The application builds successfully with no unused/invalid imports after removing ZIP export code paths."
+        "The previously empty placeholder modules for build export/ZIP writing are implemented: frontend/src/lib/buildExport.ts, frontend/src/lib/zipWriter.ts, and frontend/src/lib/zipCrc32.ts.",
+        "Generated ZIP files can be opened by standard unzip tools and contain the expected files with correct contents (no corruption).",
+        "The ZIP writer supports adding multiple text files with paths (e.g., \"frontend/src/App.tsx\") and produces consistent output across runs.",
+        "Large exports do not freeze the UI indefinitely; the export action provides visible progress state (e.g., disabled button + loading label) while generating."
+      ]
+    },
+    {
+      "id": "REQ-3",
+      "text": "Populate the exported ZIP with the repository’s source files by collecting them from the frontend build system at runtime/build time (e.g., via a static file manifest) so the export reflects the actual project code shipped in this workspace.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-1"
+        ],
+        "quotes": [
+          "do it"
+        ]
+      },
+      "acceptanceCriteria": [
+        "The export includes backend/main.mo and other existing backend files present in the workspace (e.g., backend/migration.mo only if it exists).",
+        "The export includes key frontend sources under frontend/src/ (including App.tsx and components) and relevant configuration/assets necessary to understand the project structure.",
+        "A README.txt (or README.md) is included in the ZIP root with English instructions describing what the bundle is and how to run/build it locally (high-level steps; no external services required).",
+        "The export logic deterministically includes/excludes files (documented in code) and does not rely on unavailable runtime filesystem APIs."
+      ]
+    },
+    {
+      "id": "REQ-4",
+      "text": "Add a BuildExportButton component implementation and surface it in an appropriate existing UI location (e.g., Footer or DiagnosticsBar) without changing any immutable frontend paths.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-1"
+        ],
+        "quotes": [
+          "do it"
+        ]
+      },
+      "acceptanceCriteria": [
+        "frontend/src/components/BuildExportButton.tsx is no longer empty and renders an English-labeled button control.",
+        "The button uses existing UI primitives (shadcn Button/toast) consistent with the current app styling.",
+        "The button is placed in an existing screen area that is discoverable (e.g., Footer or DiagnosticsBar) and does not break layout on mobile.",
+        "No files under frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useInternetIdentity.tsx, frontend/src/hooks/useActor.ts, frontend/src/main.tsx, or frontend/src/components/ui are edited."
       ]
     }
   ],
   "constraints": [
-    "Do not modify files under frontend/src/components/ui (read-only components must be composed, not edited).",
-    "Do not modify frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useInternetIdentity.tsx, frontend/src/hooks/useActor.ts, or frontend/src/main.tsx (immutable paths).",
-    "Backend must remain single-actor; do not add additional backend services."
+    "Do not edit any paths listed as immutable: frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useInternetIdentity.tsx, frontend/src/hooks/useActor.ts, frontend/src/main.tsx, frontend/src/components/ui.",
+    "Keep the solution within the existing React + TypeScript + Tailwind + React Query stack; do not add external backend services or third-party packaging services.",
+    "Backend must remain single-actor architecture; only add backend code if strictly necessary for export."
   ],
   "nonGoals": [
-    "Do not add an alternative build/export mechanism (e.g., TAR, direct file listing, external hosting integrations) unless explicitly requested.",
-    "Do not change wallet connection, balance fetching, vault operations, or other dashboard features beyond removing ZIP export references."
+    "Do not implement a server-side (backend) ZIP builder unless the frontend-only approach cannot produce a valid ZIP.",
+    "Do not add third-party authentication providers or any new authentication flows.",
+    "Do not introduce external databases or external file storage providers.",
+    "Do not change the existing contract-related functionality (wallet connect, deposit/withdraw, contract info) as part of this export feature."
   ],
   "imageRequirements": {
     "required": [],

@@ -14,6 +14,10 @@ const FUNCTION_SIGNATURES: Record<string, string> = {
   approve: '0x095ea7b3',
   // ERC20 balanceOf
   balanceOf: '0x70a08231',
+  // ERC20 metadata
+  symbol: '0x95d89b41',
+  decimals: '0x313ce567',
+  name: '0x06fdde03',
 };
 
 export type ParamType = 'address' | 'uint256';

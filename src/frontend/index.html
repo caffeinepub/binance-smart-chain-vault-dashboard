@@ -5,7 +5,7 @@
         <meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes' />
         <meta name='description' content='Digital Asset Vault - Secure management of your BEP20 tokens and BNB on Binance Smart Chain' />
         <meta name='theme-color' content='#000000' />
-        <meta name='build-id' content='v23-2026-02-13' />
+        <meta name='build-id' content='v24-2026-02-13' />
         <title>Digital Asset Vault</title>
         <style>
             /* Boot fallback styles - inline to avoid external dependencies */
@@ -205,7 +205,7 @@
             </div>
         </div>
         <div id='root'></div>
-        <script type='module' src='/src/main.tsx'></script>
+        <script type='module' src='./src/main.tsx'></script>
         <script>
             // Boot fallback system with performance measurement
             // This script runs after DOM is ready since it's at the end of body
@@ -317,11 +317,15 @@
                             
                             const resourceType = event.target.tagName === 'SCRIPT' ? 'JavaScript bundle' : 'stylesheet';
                             const resourceUrl = event.target.src || event.target.href || 'unknown';
+                            const baseUrl = window.location.origin + window.location.pathname.replace(/\/[^/]*$/, '/');
                             
                             showBootError(
                                 'Resource Not Found',
                                 'Failed to load ' + resourceType + '. The application files could not be found. This may be a deployment issue.',
-                                { message: 'Failed to load: ' + resourceUrl, stack: 'Resource URL: ' + resourceUrl },
+                                { 
+                                    message: 'Failed to load: ' + resourceUrl, 
+                                    stack: 'Resource URL: ' + resourceUrl + '\nBase URL: ' + baseUrl + '\nExpected path: ' + (event.target.src || event.target.href || 'N/A')
+                                },
                                 'resource-not-found'
                             );
                             return;
@@ -412,18 +416,24 @@
                     bootFallback.classList.remove('hidden');
                 }
 
-                if (bootTechnicalToggle && bootTechnicalContent) {
-                    bootTechnicalToggle.addEventListener('click', () => {
-                        bootTechnicalContent.classList.toggle('show');
-                        bootTechnicalToggle.textContent = bootTechnicalContent.classList.contains('show') 
-                            ? 'Hide Technical Details' 
-                            : 'Show Technical Details';
-                    });
-                }
-
+                // Reload button handler
                 if (bootButton) {
                     bootButton.addEventListener('click', () => {
                         window.location.reload();
+                    });
+                }
+
+                // Technical details toggle
+                if (bootTechnicalToggle && bootTechnicalContent) {
+                    bootTechnicalToggle.addEventListener('click', () => {
+                        const isShowing = bootTechnicalContent.classList.contains('show');
+                        if (isShowing) {
+                            bootTechnicalContent.classList.remove('show');
+                            bootTechnicalToggle.textContent = 'Show Technical Details';
+                        } else {
+                            bootTechnicalContent.classList.add('show');
+                            bootTechnicalToggle.textContent = 'Hide Technical Details';
+                        }
                     });
                 }
             })();

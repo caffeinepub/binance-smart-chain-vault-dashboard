@@ -1,7 +1,14 @@
-// Build information constants
-export const BUILD_VERSION = 'v23';
-export const BUILD_DATE = '2026-02-13';
-export const BUILD_IDENTIFIER = `v23-${BUILD_DATE}`;
+// Build information constants with environment variable support
+// These can be overridden at build time via environment variables
+
+// Read from environment or use defaults
+const ENV_BUILD_VERSION = import.meta.env.VITE_BUILD_VERSION;
+const ENV_BUILD_DATE = import.meta.env.VITE_BUILD_DATE;
+const ENV_BUILD_ID = import.meta.env.VITE_BUILD_ID;
+
+export const BUILD_VERSION = ENV_BUILD_VERSION || 'v24';
+export const BUILD_DATE = ENV_BUILD_DATE || '2026-02-13';
+export const BUILD_IDENTIFIER = ENV_BUILD_ID || `${BUILD_VERSION}-${BUILD_DATE}`;
 
 /**
  * Get the build version string

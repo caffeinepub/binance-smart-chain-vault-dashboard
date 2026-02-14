@@ -1,47 +1,109 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Remove ZIP build export from the app",
+  "title": "In-app client-side project ZIP export",
   "requirements": [
     {
       "id": "REQ-1",
-      "summary": "Remove the Diagnostics bar \"Build Export\" UI card/section and all ZIP-related user-facing copy while keeping other diagnostics features unchanged.",
+      "summary": "Add a visible UI control that downloads a project source ZIP in-browser with build-identified filename and error handling.",
       "acceptanceCriteria": [
-        "In the Diagnostics bar, there is no \"Build Export\" card/section visible.",
-        "No user-facing text anywhere in the app mentions downloading a ZIP, extracting a ZIP, or \"Download Frontend Build (ZIP)\".",
-        "The rest of the Diagnostics bar (build info, copy diagnostics, performance check) still renders and functions as before."
+        "There is a visible UI control (e.g., button/menu item) labeled in English (e.g., \"Download project ZIP\") that a user can click.",
+        "Clicking the control triggers a browser file download of a .zip file without navigating away from the app.",
+        "The downloaded ZIP filename includes the app build identifier (e.g., using getDeployedBuildId()/getBuildIdentifier) to distinguish builds.",
+        "The ZIP contains a clear top-level folder structure that includes at least \"backend/\" and \"frontend/\" directories with source files inside (not an empty ZIP).",
+        "If ZIP generation fails, the UI shows an English error toast/message and does not crash the app."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/components/DiagnosticsBar.tsx",
+          "path": "frontend/src/components/BuildExportButton.tsx",
           "operation": "modify",
-          "description": "Delete the entire \"Build Export\" Card section (download button, progress text, and deployment instructions) from the Diagnostics bar UI. Remove related React state, handlers, icons, and imports (including exportFrontendBuild/downloadBlob) so the remaining Diagnostics bar sections continue to render and function as before."
+          "description": "Implement the downloadable ZIP trigger UI (English label), call build export logic, generate a Blob-based download without navigation, include build identifier in the filename, and show error toast on failure. Use shadcn-ui Button and existing toast mechanism (sonner) for consistent styling; verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/components/Footer.tsx",
+          "operation": "modify",
+          "description": "Surface the BuildExportButton in an existing, discoverable footer area without breaking mobile layout (e.g., add it alongside existing footer content). Ensure the placement is responsive and does not disrupt existing branding/build info."
+        },
+        {
+          "path": "frontend/src/lib/buildExport.ts",
+          "operation": "modify",
+          "description": "Expose a single export function used by the UI that assembles the file list, builds the ZIP, and returns a Blob/Uint8Array suitable for browser download, including build identifier in returned metadata for naming."
         }
       ]
     },
     {
       "id": "REQ-2",
-      "summary": "Remove the ZIP export implementation and any ZIP-only logic so the frontend can no longer generate or download ZIP files.",
+      "summary": "Implement the stubbed ZIP/CRC/export utility modules to generate valid, deterministic ZIPs client-side with visible progress state.",
       "acceptanceCriteria": [
-        "The frontend codebase has no runtime path that generates a .zip Blob for build export.",
-        "DiagnosticsBar no longer imports or references ZIP-export-related functions/modules (e.g., '@/lib/buildExport').",
-        "The application builds successfully with no unused/invalid imports after removing ZIP export code paths."
+        "The previously empty placeholder modules for build export/ZIP writing are implemented: frontend/src/lib/buildExport.ts, frontend/src/lib/zipWriter.ts, and frontend/src/lib/zipCrc32.ts.",
+        "Generated ZIP files can be opened by standard unzip tools and contain the expected files with correct contents (no corruption).",
+        "The ZIP writer supports adding multiple text files with paths (e.g., \"frontend/src/App.tsx\") and produces consistent output across runs.",
+        "Large exports do not freeze the UI indefinitely; the export action provides visible progress state (e.g., disabled button + loading label) while generating."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/lib/buildExport.ts",
-          "operation": "delete",
-          "description": "Remove the build export module that fetches app assets and assembles a ZIP Blob for download (including the download helper), since it is only used for ZIP export."
+          "path": "frontend/src/lib/zipCrc32.ts",
+          "operation": "modify",
+          "description": "Implement CRC32 calculation utilities required by the ZIP writer to produce valid ZIP file headers and file records."
         },
         {
           "path": "frontend/src/lib/zipWriter.ts",
-          "operation": "delete",
-          "description": "Remove the in-browser ZIP writer implementation that exists solely to support the build export ZIP creation path."
+          "operation": "modify",
+          "description": "Implement a minimal ZIP writer that can add multiple text files with stable ordering and paths, and generate a valid ZIP byte array (including central directory) that standard unzip tools can open."
         },
         {
-          "path": "frontend/src/components/DiagnosticsBar.tsx",
+          "path": "frontend/src/lib/buildExport.ts",
           "operation": "modify",
-          "description": "After removing the ZIP-export UI, ensure all ZIP-export-related imports/references are removed (e.g., '@/lib/buildExport') so there is no remaining runtime path that can generate or download ZIP files, and the app compiles cleanly without unused imports."
+          "description": "Implement client-side export orchestration: collect files, feed them to zipWriter in a deterministic order, yield progress updates (e.g., callback invoked per file/chunk) to keep the UI responsive, and return the final ZIP bytes/Blob."
+        },
+        {
+          "path": "frontend/src/components/BuildExportButton.tsx",
+          "operation": "modify",
+          "description": "Add progress UI state (disabled button + loading label) while generating, and wire progress updates from buildExport utilities to the component state. Use shadcn-ui Button and existing toast mechanism (sonner); verify the component's usage instructions before implementing."
+        }
+      ]
+    },
+    {
+      "id": "REQ-3",
+      "summary": "Populate the export ZIP with real repository source files via a deterministic manifest-based collection strategy and include a README at the ZIP root.",
+      "acceptanceCriteria": [
+        "The export includes backend/main.mo and other existing backend files present in the workspace (e.g., backend/migration.mo only if it exists).",
+        "The export includes key frontend sources under frontend/src/ (including App.tsx and components) and relevant configuration/assets necessary to understand the project structure.",
+        "A README.txt (or README.md) is included in the ZIP root with English instructions describing what the bundle is and how to run/build it locally (high-level steps; no external services required).",
+        "The export logic deterministically includes/excludes files (documented in code) and does not rely on unavailable runtime filesystem APIs."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/lib/exportSourceManifest.ts",
+          "operation": "create",
+          "description": "Create a deterministic manifest/collector that uses the frontend build system (e.g., import-time globbing) to gather in-repo text sources for export. Ensure inclusion rules are documented in code and cover backend/* and frontend/src/* plus selected config files. (No runtime filesystem APIs.)"
+        },
+        {
+          "path": "frontend/src/lib/buildExport.ts",
+          "operation": "modify",
+          "description": "Use the manifest/collector to gather actual shipped workspace sources at build/runtime, include a ZIP-root README.txt (generated as a string) with English instructions, and ensure the ZIP has clear top-level backend/ and frontend/ directories with non-empty content."
+        }
+      ]
+    },
+    {
+      "id": "REQ-4",
+      "summary": "Implement BuildExportButton and place it in an existing UI location using existing UI primitives without editing immutable paths.",
+      "acceptanceCriteria": [
+        "frontend/src/components/BuildExportButton.tsx is no longer empty and renders an English-labeled button control.",
+        "The button uses existing UI primitives (shadcn Button/toast) consistent with the current app styling.",
+        "The button is placed in an existing screen area that is discoverable (e.g., Footer or DiagnosticsBar) and does not break layout on mobile.",
+        "No files under frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useInternetIdentity.tsx, frontend/src/hooks/useActor.ts, frontend/src/main.tsx, or frontend/src/components/ui are edited."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/components/BuildExportButton.tsx",
+          "operation": "modify",
+          "description": "Implement the BuildExportButton component using shadcn-ui Button and existing toast mechanism (sonner); verify the component's usage instructions before implementing. Ensure it reads the build identifier (e.g., getDeployedBuildId()/getBuildIdentifier) for naming and handles loading/error states without crashes."
+        },
+        {
+          "path": "frontend/src/components/Footer.tsx",
+          "operation": "modify",
+          "description": "Wire BuildExportButton into the existing Footer layout (discoverable, responsive). Keep changes confined to this component and avoid editing any immutable paths (especially frontend/src/components/ui and specified hooks/main entry)."
         }
       ]
     }

@@ -4,6 +4,7 @@ import { Web3Provider } from '@/hooks/useWeb3';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { Header } from '@/components/Header';
 import { Dashboard } from '@/pages/Dashboard';
+import Footer from '@/components/Footer';
 import { useEffect, useRef } from 'react';
 
 function App() {
@@ -25,8 +26,13 @@ function App() {
     <ErrorBoundary>
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
         <Web3Provider>
-          <Header />
-          <Dashboard />
+          <div className="flex flex-col min-h-screen">
+            <Header />
+            <main className="flex-1">
+              <Dashboard />
+            </main>
+            <Footer />
+          </div>
           <Toaster />
         </Web3Provider>
       </ThemeProvider>

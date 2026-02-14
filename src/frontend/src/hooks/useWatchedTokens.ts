@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { normalizeAddress } from '@/lib/evm';
+import { DEFAULT_BSC_TOKENS } from '@/lib/defaultBscTokens';
 
 const STORAGE_KEY = 'bsc-vault-watched-tokens';
+const SEEDED_FLAG_KEY = 'bsc-vault-tokens-seeded';
 
 /**
  * Hook to manage a persistent list of watched token addresses with strict validation and normalization
@@ -13,8 +15,15 @@ export function useWatchedTokens() {
   // Load from localStorage on mount and validate/normalize all stored addresses
   useEffect(() => {
     try {
+      const seeded = localStorage.getItem(SEEDED_FLAG_KEY);
       const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
+      
+      if (!seeded) {
+        // First time: seed with default BSC tokens
+        const defaultAddresses = DEFAULT_BSC_TOKENS.map(t => t.address);
+        setTokens(defaultAddresses);
+        localStorage.setItem(SEEDED_FLAG_KEY, 'true');
+      } else if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed)) {
           // Validate and normalize each stored address, discard invalid ones

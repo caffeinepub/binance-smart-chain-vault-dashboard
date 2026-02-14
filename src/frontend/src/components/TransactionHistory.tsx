@@ -1,18 +1,87 @@
-import { History, ExternalLink, Trash2, Clock, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
+import { useState } from 'react';
+import { History, ExternalLink, Trash2, Clock, CheckCircle2, XCircle, AlertCircle, Share2 } from 'lucide-react';
+import { SiWhatsapp, SiTelegram } from 'react-icons/si';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useTxHistory, type TxHistoryEntry } from '@/hooks/useTxHistory';
 import { formatDistanceToNow } from 'date-fns';
+import { toast } from 'sonner';
+import {
+  formatTxHistoryForSharing,
+  buildWhatsAppShareUrl,
+  buildTelegramShareUrl,
+  openShareUrl,
+} from '@/lib/txHistoryShare';
 
 export default function TransactionHistory() {
   const { history, clearHistory, getBscScanUrl } = useTxHistory();
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const handleClearHistory = () => {
     if (window.confirm('Are you sure you want to clear all transaction history? This action cannot be undone.')) {
       clearHistory();
+      setSelectedIds(new Set());
+    }
+  };
+
+  const handleToggleSelection = (id: string) => {
+    setSelectedIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAll = () => {
+    setSelectedIds(new Set(history.map(entry => entry.id)));
+  };
+
+  const handleClearSelection = () => {
+    setSelectedIds(new Set());
+  };
+
+  const handleShare = (platform: 'whatsapp' | 'telegram') => {
+    try {
+      if (selectedIds.size === 0) {
+        toast.error('No transactions selected', {
+          description: 'Please select at least one transaction to share.',
+        });
+        return;
+      }
+
+      const selectedEntries = history.filter(entry => selectedIds.has(entry.id));
+      const shareText = formatTxHistoryForSharing(selectedEntries);
+      
+      const shareUrl = platform === 'whatsapp' 
+        ? buildWhatsAppShareUrl(shareText)
+        : buildTelegramShareUrl(shareText);
+
+      const opened = openShareUrl(shareUrl);
+      
+      if (!opened) {
+        toast.error('Unable to open share window', {
+          description: 'Please check if popups are blocked in your browser settings.',
+        });
+      }
+    } catch (error) {
+      console.error('Share failed:', error);
+      toast.error('Failed to share transaction history', {
+        description: 'An unexpected error occurred. Please try again.',
+      });
     }
   };
 
@@ -67,17 +136,74 @@ export default function TransactionHistory() {
             </CardDescription>
           </div>
           {history.length > 0 && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleClearHistory}
-              className="flex items-center gap-2"
-            >
-              <Trash2 className="h-4 w-4" />
-              Clear History
-            </Button>
+            <div className="flex items-center gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center gap-2"
+                    disabled={selectedIds.size === 0}
+                  >
+                    <Share2 className="h-4 w-4" />
+                    Share {selectedIds.size > 0 && `(${selectedIds.size})`}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onClick={() => handleShare('whatsapp')}
+                    className="flex items-center gap-2 cursor-pointer"
+                  >
+                    <SiWhatsapp className="h-4 w-4 text-green-600" />
+                    <span>Share via WhatsApp</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => handleShare('telegram')}
+                    className="flex items-center gap-2 cursor-pointer"
+                  >
+                    <SiTelegram className="h-4 w-4 text-blue-500" />
+                    <span>Share via Telegram</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleClearHistory}
+                className="flex items-center gap-2"
+              >
+                <Trash2 className="h-4 w-4" />
+                Clear History
+              </Button>
+            </div>
           )}
         </div>
+        {history.length > 0 && (
+          <div className="flex items-center gap-2 pt-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleSelectAll}
+              className="h-8 text-xs"
+            >
+              Select All
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleClearSelection}
+              className="h-8 text-xs"
+              disabled={selectedIds.size === 0}
+            >
+              Clear Selection
+            </Button>
+            {selectedIds.size > 0 && (
+              <span className="text-xs text-muted-foreground">
+                {selectedIds.size} of {history.length} selected
+              </span>
+            )}
+          </div>
+        )}
       </CardHeader>
       <CardContent>
         {history.length === 0 ? (
@@ -95,23 +221,30 @@ export default function TransactionHistory() {
                   <CardContent className="pt-4">
                     <div className="space-y-3">
                       <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="font-semibold text-sm">{entry.type}</span>
-                            {getStatusBadge(entry.status)}
-                          </div>
-                          <div className="text-sm text-muted-foreground space-y-1">
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium">Asset:</span>
-                              <span className="font-mono text-xs">{shortenAddress(entry.asset)}</span>
+                        <div className="flex items-start gap-3 flex-1 min-w-0">
+                          <Checkbox
+                            checked={selectedIds.has(entry.id)}
+                            onCheckedChange={() => handleToggleSelection(entry.id)}
+                            className="mt-1"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="font-semibold text-sm">{entry.type}</span>
+                              {getStatusBadge(entry.status)}
                             </div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium">Amount:</span>
-                              <span>{entry.amount}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium">Time:</span>
-                              <span>{formatDistanceToNow(entry.timestamp, { addSuffix: true })}</span>
+                            <div className="text-sm text-muted-foreground space-y-1">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">Asset:</span>
+                                <span className="font-mono text-xs">{shortenAddress(entry.asset)}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">Amount:</span>
+                                <span>{entry.amount}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">Time:</span>
+                                <span>{formatDistanceToNow(entry.timestamp, { addSuffix: true })}</span>
+                              </div>
                             </div>
                           </div>
                         </div>

@@ -1,39 +1,71 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-13T22:56:37.705Z",
+  "generatedAt": "2026-02-14T10:43:53.819Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
   },
   "requirements": {
-    "total": 2,
-    "implemented": 2,
+    "total": 4,
+    "implemented": 4,
     "items": [
       {
         "id": "REQ-1",
-        "summary": "Remove the ZIP build export feature from the UI by deleting the \"Build Export\" section in the Diagnostics bar, including the download button, progress text, and the deployment instructions that reference downloading/extracting a ZIP.",
+        "summary": "Implement a user-accessible control in the UI to download a ZIP bundle of the project source (at minimum include backend/ and frontend/ source files that are present in the repository) as a file download in the browser.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/components/DiagnosticsBar.tsx"
+          "frontend/src/components/BuildExportButton.tsx",
+          "frontend/src/components/Footer.tsx",
+          "frontend/src/lib/buildExport.ts"
         ],
         "matchedFiles": [
-          "frontend/src/components/DiagnosticsBar.tsx"
+          "frontend/src/components/BuildExportButton.tsx",
+          "frontend/src/components/Footer.tsx",
+          "frontend/src/lib/buildExport.ts"
         ]
       },
       {
         "id": "REQ-2",
-        "summary": "Remove the underlying ZIP export implementation so the frontend no longer generates or downloads ZIP files, including removing the usage of exportFrontendBuild/downloadBlob and any ZIP writer logic that is only used for this export.",
+        "summary": "Implement the ZIP generation utilities currently stubbed in the codebase so the frontend can create a valid ZIP file client-side from a set of in-repo source files.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/lib/buildExport.ts",
+          "frontend/src/lib/zipCrc32.ts",
           "frontend/src/lib/zipWriter.ts",
-          "frontend/src/components/DiagnosticsBar.tsx"
+          "frontend/src/lib/buildExport.ts",
+          "frontend/src/components/BuildExportButton.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/lib/buildExport.ts",
+          "frontend/src/lib/zipCrc32.ts",
           "frontend/src/lib/zipWriter.ts",
-          "frontend/src/components/DiagnosticsBar.tsx"
+          "frontend/src/lib/buildExport.ts",
+          "frontend/src/components/BuildExportButton.tsx"
+        ]
+      },
+      {
+        "id": "REQ-3",
+        "summary": "Populate the exported ZIP with the repository’s source files by collecting them from the frontend build system at runtime/build time (e.g., via a static file manifest) so the export reflects the actual project code shipped in this workspace.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/lib/exportSourceManifest.ts",
+          "frontend/src/lib/buildExport.ts"
+        ],
+        "matchedFiles": [
+          "frontend/src/lib/exportSourceManifest.ts",
+          "frontend/src/lib/buildExport.ts"
+        ]
+      },
+      {
+        "id": "REQ-4",
+        "summary": "Add a BuildExportButton component implementation and surface it in an appropriate existing UI location (e.g., Footer or DiagnosticsBar) without changing any immutable frontend paths.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/components/BuildExportButton.tsx",
+          "frontend/src/components/Footer.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/components/BuildExportButton.tsx",
+          "frontend/src/components/Footer.tsx"
         ]
       }
     ]
@@ -43,8 +75,11 @@
     "feature_evidence.json",
     "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
-    "frontend/src/components/DiagnosticsBar.tsx",
+    "frontend/src/components/BuildExportButton.tsx",
+    "frontend/src/components/Footer.tsx",
     "frontend/src/lib/buildExport.ts",
+    "frontend/src/lib/exportSourceManifest.ts",
+    "frontend/src/lib/zipCrc32.ts",
     "frontend/src/lib/zipWriter.ts",
     "project_state.json",
     "scratch/component-selection.json",

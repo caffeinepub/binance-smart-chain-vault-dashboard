@@ -2,10 +2,12 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-remove-the-zip-build-export-feature-from-the-ui-by-deleting-the-build-export-section-in-the-diagnostics-bar-including-the-download-button-progress-text-and-the-deployment-instructions-that-reference-downloading-extracting-a-zip",
-      "featureTitle": "Remove the ZIP build export feature from the UI by deleting the \"Build Export\" section in the Diagnostics bar, including the download button, progress text, and the deployment instructions that reference downloading/extracting a ZIP.",
+      "featureId": "feature-implement-a-user-accessible-control-in-the-ui-to-download-a-zip-bundle-of-the-project-source-at-minimum-include-backend-and-frontend-source-files-that-are-present-in-the-repository-as-a-file-download-in-the-browser",
+      "featureTitle": "Implement a user-accessible control in the UI to download a ZIP bundle of the project source (at minimum include backend/ and frontend/ source files that are present in the repository) as a file download in the browser.",
       "files": [
-        "frontend/src/components/DiagnosticsBar.tsx"
+        "frontend/src/components/BuildExportButton.tsx",
+        "frontend/src/components/Footer.tsx",
+        "frontend/src/lib/buildExport.ts"
       ],
       "components": [
         "core-infrastructure@1.0.2",
@@ -20,11 +22,12 @@
       "confidence": "high"
     },
     {
-      "featureId": "feature-remove-the-underlying-zip-export-implementation-so-the-frontend-no-longer-generates-or-downloads-zip-files-including-removing-the-usage-of-exportfrontendbuild-downloadblob-and-any-zip-writer-logic-that-is-only-used-for-this-export",
-      "featureTitle": "Remove the underlying ZIP export implementation so the frontend no longer generates or downloads ZIP files, including removing the usage of exportFrontendBuild/downloadBlob and any ZIP writer logic that is only used for this export.",
+      "featureId": "feature-implement-the-zip-generation-utilities-currently-stubbed-in-the-codebase-so-the-frontend-can-create-a-valid-zip-file-client-side-from-a-set-of-in-repo-source-files",
+      "featureTitle": "Implement the ZIP generation utilities currently stubbed in the codebase so the frontend can create a valid ZIP file client-side from a set of in-repo source files.",
       "files": [
-        "frontend/src/components/DiagnosticsBar.tsx",
+        "frontend/src/components/BuildExportButton.tsx",
         "frontend/src/lib/buildExport.ts",
+        "frontend/src/lib/zipCrc32.ts",
         "frontend/src/lib/zipWriter.ts"
       ],
       "components": [
@@ -36,6 +39,44 @@
       ],
       "testIds": [
         "REQ-2"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-populate-the-exported-zip-with-the-repository-s-source-files-by-collecting-them-from-the-frontend-build-system-at-runtime-build-time-e-g-via-a-static-file-manifest-so-the-export-reflects-the-actual-project-code-shipped-in-this-workspace",
+      "featureTitle": "Populate the exported ZIP with the repository’s source files by collecting them from the frontend build system at runtime/build time (e.g., via a static file manifest) so the export reflects the actual project code shipped in this workspace.",
+      "files": [
+        "frontend/src/lib/buildExport.ts",
+        "frontend/src/lib/exportSourceManifest.ts"
+      ],
+      "components": [
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-3"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-add-a-buildexportbutton-component-implementation-and-surface-it-in-an-appropriate-existing-ui-location-e-g-footer-or-diagnosticsbar-without-changing-any-immutable-frontend-paths",
+      "featureTitle": "Add a BuildExportButton component implementation and surface it in an appropriate existing UI location (e.g., Footer or DiagnosticsBar) without changing any immutable frontend paths.",
+      "files": [
+        "frontend/src/components/BuildExportButton.tsx",
+        "frontend/src/components/Footer.tsx"
+      ],
+      "components": [
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-4"
       ],
       "confidence": "high"
     }

@@ -1,49 +1,69 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-02-13T22:56:37.702Z",
-  "summary": "Diff shows partial changes to DiagnosticsBar plus modifications to buildExport/zipWriter, but the key ZIP-export removal cannot be verified from the truncated/omitted content. Some non-product metadata files were also modified without being requested.",
+  "generatedAt": "2026-02-14T10:43:53.815Z",
+  "summary": "Implements a BuildExportButton in the Footer and adds client-side ZIP generation utilities (CRC32 + ZIP writer + buildExport flow). However, the exported ZIP contents do not appear to include the actual repository source tree (notably missing frontend/src/* and real backend sources), and some exported files are synthetic placeholders rather than collected from the workspace.",
   "missing_requirements": [
     {
       "id": "REQ-1",
-      "requirement": "Remove the ZIP build export feature from the UI by deleting the \"Build Export\" section in the Diagnostics bar, including the download button, progress text, and the deployment instructions that reference downloading/extracting a ZIP.",
-      "reason": "DiagnosticsBar.tsx is truncated and the diff summary does not show removal of a \"Build Export\" section or elimination of ZIP-related UI text; cannot confirm the card/section and related copy were removed.",
+      "requirement": "The ZIP contains a clear top-level folder structure that includes at least \"backend/\" and \"frontend/\" directories with source files inside (not an empty ZIP).",
+      "reason": "While the export includes a backend/main.mo and a couple of frontend-related files, the diff does not show inclusion of actual frontend source files (e.g., frontend/src/App.tsx, components) inside the ZIP; only index.html/health.html are fetched plus synthetic config files.",
       "evidence": [
-        "frontend/src/components/DiagnosticsBar.tsx (truncated)"
+        "frontend/src/lib/buildExport.ts",
+        "frontend/src/lib/exportSourceManifest.ts"
       ]
     },
     {
       "id": "REQ-2",
-      "requirement": "Remove the underlying ZIP export implementation so the frontend no longer generates or downloads ZIP files, including removing the usage of exportFrontendBuild/downloadBlob and any ZIP writer logic that is only used for this export.",
-      "reason": "buildExport.ts and zipWriter.ts are listed as modified, but their content is not shown. The DiagnosticsBar snippet also does not show whether ZIP-export-related imports/references were removed. Therefore cannot verify that ZIP Blob generation paths and related imports are fully removed or unused imports are resolved.",
+      "requirement": "Generated ZIP files can be opened by standard unzip tools and contain the expected files with correct contents (no corruption).",
+      "reason": "zipWriter.ts is truncated in the diff, so the presence/correctness of central directory + end-of-central-directory record implementation cannot be verified from the provided evidence.",
+      "evidence": [
+        "frontend/src/lib/zipWriter.ts (truncated)"
+      ]
+    },
+    {
+      "id": "REQ-3",
+      "requirement": "Populate the exported ZIP with the repository’s source files (include key frontend sources under frontend/src/, including App.tsx and components) via a deterministic manifest/collector.",
+      "reason": "The collector/manifest shown does not gather actual in-repo frontend/src/* files; it only fetches /index.html and /health.html at runtime and adds a synthetic frontend/package.json and dfx.json. There is no evidence of enumerating/importing workspace source modules or using a build-time manifest for frontend/src content.",
       "evidence": [
         "frontend/src/lib/buildExport.ts",
-        "frontend/src/lib/zipWriter.ts",
-        "frontend/src/components/DiagnosticsBar.tsx (truncated)"
+        "frontend/src/lib/exportSourceManifest.ts"
+      ]
+    },
+    {
+      "id": "REQ-3",
+      "requirement": "The export includes backend/main.mo and other existing backend files present in the workspace (e.g., backend/migration.mo only if it exists).",
+      "reason": "Only backend/main.mo is included and its content is hardcoded as `actor {};` rather than collected from the repository; no other backend files are included or conditionally included.",
+      "evidence": [
+        "frontend/src/lib/exportSourceManifest.ts"
       ]
     }
   ],
   "hallucinated_features": [
     {
-      "description": "Modified project tracking/metadata file (project_state.json) to add/mark feature requests.",
-      "reason": "BuildRequest did not request changes to project_state.json; this is not part of removing ZIP export from the app UI/implementation.",
+      "description": "Adds/generated non-requested project meta files (project_state.json and frontend-file-summaries.txt) updates as part of the diff.",
+      "reason": "The BuildRequest is about implementing in-app ZIP export; it does not request adding/modifying repository meta/state tracking files.",
       "evidence": [
-        "project_state.json"
+        "project_state.json",
+        "frontend-file-summaries.txt (truncated)"
       ]
     },
     {
-      "description": "Modified repository summary file (frontend-file-summaries.txt).",
-      "reason": "BuildRequest did not request updating documentation/summary artifacts; not necessary to implement ZIP export removal.",
+      "description": "Exports synthetic/hardcoded backend and config content (backend/main.mo as `actor {};`, frontend/package.json and dfx.json generated via JSON.stringify) rather than collecting the actual repository files.",
+      "reason": "REQ-3 explicitly asks to export the repository’s source files present in the workspace; generating placeholder file contents is not requested and may diverge from the real repo content.",
       "evidence": [
-        "frontend-file-summaries.txt (truncated)"
+        "frontend/src/lib/exportSourceManifest.ts"
       ]
     }
   ],
-  "confidence": 0.46,
+  "confidence": 0.72,
   "changed_files": [
     "frontend-file-summaries.txt",
-    "frontend/src/components/DiagnosticsBar.tsx",
+    "frontend/src/components/BuildExportButton.tsx",
+    "frontend/src/components/Footer.tsx",
     "frontend/src/lib/buildExport.ts",
+    "frontend/src/lib/exportSourceManifest.ts",
+    "frontend/src/lib/zipCrc32.ts",
     "frontend/src/lib/zipWriter.ts",
     "project_state.json"
   ]

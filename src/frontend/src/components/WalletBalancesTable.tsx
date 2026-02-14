@@ -2,6 +2,8 @@ import { TrendingUp, Wallet, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
+import { useSavedTokenCatalog } from '@/hooks/useSavedTokenCatalog';
+import { getTokenDisplayLabel } from '@/lib/tokenDisplay';
 
 interface TokenBalance {
   address: string;
@@ -32,6 +34,8 @@ export function WalletBalancesTable({
   tokenValuations,
   isLoadingPrices,
 }: WalletBalancesTableProps) {
+  const { catalog } = useSavedTokenCatalog();
+
   return (
     <Card className="border-primary/20">
       <CardHeader>
@@ -72,10 +76,17 @@ export function WalletBalancesTable({
             <div className="space-y-2">
               {tokenBalances.map((token) => {
                 const valuation = tokenValuations.get(token.address);
+                const catalogLabel = catalog.get(token.address.toLowerCase());
+                const displayLabel = getTokenDisplayLabel(
+                  token.address,
+                  catalogLabel,
+                  token.symbol
+                );
+                
                 return (
                   <div key={token.address} className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/30 transition-colors">
                     <div className="flex items-center gap-2">
-                      <Badge variant="outline">{token.symbol}</Badge>
+                      <Badge variant="outline">{displayLabel}</Badge>
                       <span className="text-xs text-muted-foreground font-mono">
                         {token.address.slice(0, 6)}...{token.address.slice(-4)}
                       </span>

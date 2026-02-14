@@ -1,24 +1,42 @@
 {
   "schemaVersion": "1.0.0",
   "projectStateVersion": 3,
-  "summary": "New project",
-  "architectural_notes": [],
+  "summary": "Project to (re)build/regenerate the codebase and provide a downloadable zip bundle of the project.",
+  "architectural_notes": [
+    "Packaging requires access to project files/workspace; if unavailable, the project must be regenerated/rebuilt before creating a zip bundle."
+  ],
   "known_issues": [],
-  "isFixRequest": true,
+  "isFixRequest": false,
   "existing_features": [
     {
-      "id": "feature-remove-the-zip-build-export-feature-from-the-ui-by-deleting-the-build-export-section-in-the-diagnostics-bar-including-the-download-button-progress-text-and-the-deployment-instructions-that-reference-downloading-extracting-a-zip",
-      "title": "Remove the ZIP build export feature from the UI by deleting the \"Build Export\" section in the Diagnostics bar, including the download button, progress text, and the deployment instructions that reference downloading/extracting a ZIP.",
+      "id": "feature-implement-a-user-accessible-control-in-the-ui-to-download-a-zip-bundle-of-the-project-source-at-minimum-include-backend-and-frontend-source-files-that-are-present-in-the-repository-as-a-file-download-in-the-browser",
+      "title": "Implement a user-accessible control in the UI to download a ZIP bundle of the project source (at minimum include backend/ and frontend/ source files that are present in the repository) as a file download in the browser.",
       "reqIds": [
         "REQ-1"
       ],
       "version": 1
     },
     {
-      "id": "feature-remove-the-underlying-zip-export-implementation-so-the-frontend-no-longer-generates-or-downloads-zip-files-including-removing-the-usage-of-exportfrontendbuild-downloadblob-and-any-zip-writer-logic-that-is-only-used-for-this-export",
-      "title": "Remove the underlying ZIP export implementation so the frontend no longer generates or downloads ZIP files, including removing the usage of exportFrontendBuild/downloadBlob and any ZIP writer logic that is only used for this export.",
+      "id": "feature-implement-the-zip-generation-utilities-currently-stubbed-in-the-codebase-so-the-frontend-can-create-a-valid-zip-file-client-side-from-a-set-of-in-repo-source-files",
+      "title": "Implement the ZIP generation utilities currently stubbed in the codebase so the frontend can create a valid ZIP file client-side from a set of in-repo source files.",
       "reqIds": [
         "REQ-2"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-populate-the-exported-zip-with-the-repository-s-source-files-by-collecting-them-from-the-frontend-build-system-at-runtime-build-time-e-g-via-a-static-file-manifest-so-the-export-reflects-the-actual-project-code-shipped-in-this-workspace",
+      "title": "Populate the exported ZIP with the repository’s source files by collecting them from the frontend build system at runtime/build time (e.g., via a static file manifest) so the export reflects the actual project code shipped in this workspace.",
+      "reqIds": [
+        "REQ-3"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-a-buildexportbutton-component-implementation-and-surface-it-in-an-appropriate-existing-ui-location-e-g-footer-or-diagnosticsbar-without-changing-any-immutable-frontend-paths",
+      "title": "Add a BuildExportButton component implementation and surface it in an appropriate existing UI location (e.g., Footer or DiagnosticsBar) without changing any immutable frontend paths.",
+      "reqIds": [
+        "REQ-4"
       ],
       "version": 1
     }
@@ -26,12 +44,12 @@
   "new_feature_requests": [
     {
       "id": "AR-1",
-      "summary": "Remove the zip file from the build/deployment output",
+      "summary": "Regenerate/build the project codebase so it can be packaged and delivered as a downloadable zip bundle",
       "reqIds": [],
       "status": "pending"
     }
   ],
-  "projectName": "Remove ZIP build export from the app",
+  "projectName": "Add in-app downloadable ZIP bundle export of the project",
   "clarification_mode": "instant",
   "clarification_rounds": 0
 }

@@ -1,7 +1,10 @@
-import { TrendingUp, Coins, AlertCircle } from 'lucide-react';
+import { TrendingUp, Coins, AlertCircle, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useSavedTokenCatalog } from '@/hooks/useSavedTokenCatalog';
+import { getTokenDisplayLabel } from '@/lib/tokenDisplay';
 
 interface TokenBalance {
   address: string;
@@ -9,6 +12,8 @@ interface TokenBalance {
   balanceRaw: bigint;
   symbol: string;
   decimals: number;
+  error?: string;
+  usedFallback?: boolean;
 }
 
 interface TokenValuation {
@@ -23,6 +28,8 @@ interface VaultBalancesTableProps {
   tokenBalances: TokenBalance[];
   tokenValuations: Map<string, TokenValuation>;
   isLoadingPrices: boolean;
+  hasWatchedTokens: boolean;
+  tokenErrorCount: number;
 }
 
 export function VaultBalancesTable({
@@ -31,7 +38,11 @@ export function VaultBalancesTable({
   tokenBalances,
   tokenValuations,
   isLoadingPrices,
+  hasWatchedTokens,
+  tokenErrorCount,
 }: VaultBalancesTableProps) {
+  const { catalog } = useSavedTokenCatalog();
+
   return (
     <Card className="border-primary/20">
       <CardHeader>
@@ -65,6 +76,26 @@ export function VaultBalancesTable({
           </div>
         </div>
 
+        {/* Token error summary */}
+        {tokenErrorCount > 0 && (
+          <Alert className="border-amber-500/30 bg-amber-500/5">
+            <AlertTriangle className="h-4 w-4 text-amber-500" />
+            <AlertDescription className="text-sm">
+              {tokenErrorCount} token balance{tokenErrorCount > 1 ? 's' : ''} could not be loaded. Check individual token rows for details.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Empty state when no watched tokens */}
+        {!hasWatchedTokens && (
+          <Alert className="border-muted">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription className="text-sm">
+              No tokens are being tracked. Add custom tokens to see their vault balances here.
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Token Rows */}
         {tokenBalances.length > 0 && (
           <>
@@ -72,17 +103,35 @@ export function VaultBalancesTable({
             <div className="space-y-2">
               {tokenBalances.map((token) => {
                 const valuation = tokenValuations.get(token.address);
+                const catalogLabel = catalog.get(token.address.toLowerCase());
+                const displayLabel = getTokenDisplayLabel(
+                  token.address,
+                  catalogLabel,
+                  token.symbol
+                );
+                
                 return (
                   <div key={token.address} className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/30 transition-colors">
                     <div className="flex items-center gap-2">
-                      <Badge variant="outline">{token.symbol}</Badge>
+                      <Badge variant={token.error ? "destructive" : "outline"}>{displayLabel}</Badge>
                       <span className="text-xs text-muted-foreground font-mono">
                         {token.address.slice(0, 6)}...{token.address.slice(-4)}
                       </span>
+                      {token.usedFallback && !token.error && (
+                        <Badge variant="secondary" className="text-xs">
+                          ERC20
+                        </Badge>
+                      )}
                     </div>
                     <div className="text-right">
                       <div className="font-mono font-semibold">{token.balance}</div>
-                      {!isLoadingPrices && valuation && (
+                      {token.error && (
+                        <div className="text-xs text-destructive flex items-center gap-1 justify-end">
+                          <AlertCircle className="h-3 w-3" />
+                          {token.error}
+                        </div>
+                      )}
+                      {!token.error && !isLoadingPrices && valuation && (
                         <>
                           {valuation.usdValue && (
                             <div className="text-xs text-muted-foreground flex items-center gap-1 justify-end">
@@ -103,16 +152,6 @@ export function VaultBalancesTable({
                   </div>
                 );
               })}
-            </div>
-          </>
-        )}
-
-        {/* No additional tokens message */}
-        {tokenBalances.length === 0 && (
-          <>
-            <Separator />
-            <div className="text-center py-4 text-muted-foreground text-sm">
-              No additional tokens in vault
             </div>
           </>
         )}

@@ -1,249 +1,189 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useWeb3 } from './useWeb3';
-import { encodeCall, decodeResult } from '@/lib/contracts';
-import { formatUnits } from '@/lib/evm';
 import { useWatchedTokens } from './useWatchedTokens';
-import { decodeTokenSymbol } from '@/lib/evmAbiText';
 import { useTokenMetadataCache } from './useTokenMetadataCache';
+import { encodeCall } from '@/lib/contracts';
+import { formatUnits } from '@/lib/evm';
+import { decodeTokenSymbol } from '@/lib/evmAbiText';
 
-const POLL_INTERVAL = 10000; // 10 seconds
-const FETCH_TIMEOUT = 15000; // 15 seconds timeout for RPC calls
 const BSC_CHAIN_ID = 56;
 
-export interface TokenBalance {
+interface TokenBalance {
   address: string;
-  symbol: string;
   balance: string;
   balanceRaw: bigint;
+  symbol: string;
   decimals: number;
 }
 
-/**
- * Wraps a promise with a timeout
- */
-function withTimeout<T>(promise: Promise<T>, timeoutMs: number, errorMessage: string): Promise<T> {
-  return Promise.race([
-    promise,
-    new Promise<T>((_, reject) =>
-      setTimeout(() => reject(new Error(errorMessage)), timeoutMs)
-    ),
-  ]);
+interface WalletBalancesResult {
+  bnbBalance: string;
+  bnbBalanceRaw: bigint;
+  tokenBalances: TokenBalance[];
+  isLoading: boolean;
+  isRefreshing: boolean;
+  error: string | null;
+  refetch: () => Promise<void>;
+  isPaused: boolean;
+  togglePause: () => void;
+  lastUpdated: Date | null;
+  liveUpdatesEnabled: boolean;
+  setLiveUpdatesEnabled: (enabled: boolean) => void;
 }
 
-export function useWalletBalances(enablePolling = true) {
-  const { callContract, getNativeBalance, isConnected, chainId, account } = useWeb3();
+/**
+ * Hook for fetching BNB and watched-token balances from the connected wallet address
+ * Automatically fetches on wallet connect/account/chain changes
+ * BSC-only blocking, polling support, partial-failure resilience
+ */
+export function useWalletBalances(): WalletBalancesResult {
+  const { account, chainId, callContract, getNativeBalance } = useWeb3();
   const { tokens: watchedTokens } = useWatchedTokens();
   const { get: getMetadata, set: setMetadata } = useTokenMetadataCache();
 
-  const [bnbBalance, setBnbBalance] = useState<string>('0');
-  const [bnbBalanceRaw, setBnbBalanceRaw] = useState<bigint>(0n);
+  const [bnbBalance, setBnbBalance] = useState('0.0000');
+  const [bnbBalanceRaw, setBnbBalanceRaw] = useState(0n);
   const [tokenBalances, setTokenBalances] = useState<TokenBalance[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [isPaused, setIsPaused] = useState(false);
   const [liveUpdatesEnabled, setLiveUpdatesEnabled] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-  // Track in-flight fetch promise for coalescing
-  const inFlightFetchRef = useRef<Promise<void> | null>(null);
-  
-  // Keep last successful balances to avoid resetting on errors
-  const lastSuccessfulBnbRef = useRef<{ balance: string; balanceRaw: bigint }>({ balance: '0', balanceRaw: 0n });
-  const lastSuccessfulTokensRef = useRef<TokenBalance[]>([]);
+  // Track previous state to detect meaningful changes
+  const prevAccountRef = useRef<string | null>(null);
+  const prevChainIdRef = useRef<number | null>(null);
+  const prevWatchedTokensRef = useRef<string[]>([]);
 
-  // Track previous connection state to detect transitions
-  const prevConnectionStateRef = useRef<{ isConnected: boolean; chainId: number | null; account: string | null }>({
-    isConnected: false,
-    chainId: null,
-    account: null,
-  });
-
-  // Check if on correct network - treat null as "detecting" not "wrong"
   const isOnBSC = chainId === BSC_CHAIN_ID;
-  const isDetectingNetwork = chainId === null && isConnected;
+  const isReady = !!account && isOnBSC;
 
-  const fetchBnbBalance = useCallback(async () => {
-    if (!isConnected || !isOnBSC || !account) return;
+  const fetchBalances = async (isManualRefresh = false) => {
+    if (!isReady || (isPaused && !isManualRefresh) || (!liveUpdatesEnabled && !isManualRefresh)) return;
+
+    if (isManualRefresh) {
+      setIsRefreshing(true);
+    } else {
+      setIsLoading(true);
+    }
+    setError(null);
 
     try {
-      const nativeBalance = await withTimeout(
-        getNativeBalance(account),
-        FETCH_TIMEOUT,
-        'Native balance fetch timed out'
-      );
-      
-      const formatted = formatUnits(nativeBalance, 18);
-      
-      setBnbBalanceRaw(nativeBalance);
-      setBnbBalance(formatted);
-      
-      // Store successful result
-      lastSuccessfulBnbRef.current = { balance: formatted, balanceRaw: nativeBalance };
-    } catch (err: any) {
-      console.error('Failed to fetch wallet BNB balance:', err);
-      
-      // Keep last known balance instead of resetting to 0
-      if (lastSuccessfulBnbRef.current.balance !== '0') {
-        setBnbBalance(lastSuccessfulBnbRef.current.balance);
-        setBnbBalanceRaw(lastSuccessfulBnbRef.current.balanceRaw);
-      }
-      throw err;
-    }
-  }, [isConnected, isOnBSC, account, getNativeBalance]);
+      // Fetch BNB balance
+      const bnbRaw = await getNativeBalance(account);
+      const bnbFormatted = formatUnits(bnbRaw, 18);
+      setBnbBalanceRaw(bnbRaw);
+      setBnbBalance(bnbFormatted);
 
-  const fetchTokenBalances = useCallback(async () => {
-    if (!isConnected || !isOnBSC || !account) return;
+      // Fetch token balances
+      const balances: TokenBalance[] = [];
 
-    const balances: TokenBalance[] = [];
-    const errors: string[] = [];
+      for (const tokenAddress of watchedTokens) {
+        try {
+          // Check metadata cache first
+          let metadata = getMetadata(tokenAddress);
 
-    for (const tokenAddress of watchedTokens) {
-      try {
-        // Check cache first
-        let metadata = getMetadata(tokenAddress);
+          // If not cached, fetch metadata
+          if (!metadata) {
+            const [symbolResult, decimalsResult] = await Promise.allSettled([
+              callContract(tokenAddress, encodeCall('symbol')),
+              callContract(tokenAddress, encodeCall('decimals')),
+            ]);
 
-        // Fetch metadata if not cached
-        if (!metadata) {
-          const symbolCallData = encodeCall('symbol');
-          const decimalsCallData = encodeCall('decimals');
+            const symbol = symbolResult.status === 'fulfilled'
+              ? decodeTokenSymbol(symbolResult.value, '')
+              : '';
 
-          const [symbolHex, decimalsHex] = await Promise.all([
-            withTimeout(
-              callContract(tokenAddress, symbolCallData),
-              FETCH_TIMEOUT,
-              'Symbol fetch timed out'
-            ),
-            withTimeout(
-              callContract(tokenAddress, decimalsCallData),
-              FETCH_TIMEOUT,
-              'Decimals fetch timed out'
-            ),
+            const decimals = decimalsResult.status === 'fulfilled' && decimalsResult.value !== '0x'
+              ? parseInt(decimalsResult.value, 16)
+              : 18;
+
+            // Validate decimals range
+            const validDecimals = decimals >= 0 && decimals <= 77 ? decimals : 18;
+
+            // Ensure symbol is non-empty
+            const validSymbol = symbol && symbol.trim() ? symbol : 'TOKEN';
+
+            metadata = {
+              symbol: validSymbol,
+              decimals: validDecimals,
+            };
+
+            // Cache for future use
+            setMetadata(tokenAddress, metadata);
+          }
+
+          // Fetch balance
+          const balanceData = encodeCall('balanceOf', [
+            { type: 'address', value: account },
           ]);
+          const balanceResult = await callContract(tokenAddress, balanceData);
+          const balanceRaw = balanceResult && balanceResult !== '0x'
+            ? BigInt(balanceResult)
+            : 0n;
 
-          const symbol = decodeTokenSymbol(symbolHex);
-          // Decimals is uint8, but we decode as uint256 and convert to number
-          const decimals = Number(decodeResult(decimalsHex, 'uint256'));
+          const balanceFormatted = formatUnits(balanceRaw, metadata.decimals);
 
-          metadata = { symbol, decimals };
-          setMetadata(tokenAddress, metadata);
+          balances.push({
+            address: tokenAddress,
+            balance: balanceFormatted,
+            balanceRaw,
+            symbol: metadata.symbol,
+            decimals: metadata.decimals,
+          });
+        } catch (tokenError: any) {
+          console.warn(`Failed to fetch balance for token ${tokenAddress}:`, tokenError);
+          // Continue with other tokens
         }
-
-        // Fetch balance using balanceOf(account)
-        const balanceOfCallData = encodeCall('balanceOf', [
-          { type: 'address', value: account }
-        ]);
-        const balanceHex = await withTimeout(
-          callContract(tokenAddress, balanceOfCallData),
-          FETCH_TIMEOUT,
-          'Balance fetch timed out'
-        );
-
-        const balanceRaw = decodeResult(balanceHex, 'uint256') as bigint;
-        const balance = formatUnits(balanceRaw, metadata.decimals);
-
-        balances.push({
-          address: tokenAddress,
-          symbol: metadata.symbol,
-          balance,
-          balanceRaw,
-          decimals: metadata.decimals,
-        });
-      } catch (err: any) {
-        console.error(`Failed to fetch balance for token ${tokenAddress}:`, err);
-        errors.push(`${tokenAddress}: ${err.message}`);
-        // Continue with other tokens
       }
-    }
 
-    setTokenBalances(balances);
-    lastSuccessfulTokensRef.current = balances;
-
-    if (errors.length > 0 && balances.length === 0) {
-      throw new Error(`Failed to fetch any token balances: ${errors.join('; ')}`);
-    }
-  }, [isConnected, isOnBSC, account, watchedTokens, callContract, getMetadata, setMetadata]);
-
-  const fetchAllBalances = useCallback(async () => {
-    // Coalesce concurrent calls
-    if (inFlightFetchRef.current) {
-      return inFlightFetchRef.current;
-    }
-
-    const fetchPromise = (async () => {
-      try {
-        setError(null);
-
-        await Promise.all([
-          fetchBnbBalance(),
-          fetchTokenBalances(),
-        ]);
-
-        setLastUpdated(new Date());
-      } catch (err: any) {
-        console.error('Error fetching wallet balances:', err);
-        setError(err.message || 'Failed to fetch wallet balances');
-      } finally {
-        inFlightFetchRef.current = null;
-      }
-    })();
-
-    inFlightFetchRef.current = fetchPromise;
-    return fetchPromise;
-  }, [fetchBnbBalance, fetchTokenBalances]);
-
-  const refetch = useCallback(async () => {
-    setIsRefreshing(true);
-    try {
-      await fetchAllBalances();
+      setTokenBalances(balances);
+      setLastUpdated(new Date());
+    } catch (err: any) {
+      console.error('Error fetching wallet balances:', err);
+      setError(err.message || 'Failed to fetch wallet balances');
     } finally {
+      setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [fetchAllBalances]);
+  };
 
-  // Initial fetch and auto-fetch on connection/network/account changes
+  const togglePause = () => {
+    setIsPaused(prev => !prev);
+  };
+
+  const handleRefetch = async () => {
+    await fetchBalances(true);
+  };
+
+  // Effect: Fetch on meaningful state changes
   useEffect(() => {
-    const prevState = prevConnectionStateRef.current;
-    const currentState = { isConnected, chainId, account };
+    const accountChanged = prevAccountRef.current !== account;
+    const chainChanged = prevChainIdRef.current !== chainId;
+    const tokensChanged = JSON.stringify(prevWatchedTokensRef.current) !== JSON.stringify(watchedTokens);
 
-    // Detect meaningful state transitions
-    const justConnected = !prevState.isConnected && isConnected;
-    const networkChanged = prevState.chainId !== chainId && chainId !== null;
-    const accountChanged = prevState.account !== account && account !== null;
-    const nowOnBSC = !isDetectingNetwork && isOnBSC;
+    if (accountChanged || chainChanged || tokensChanged) {
+      prevAccountRef.current = account;
+      prevChainIdRef.current = chainId;
+      prevWatchedTokensRef.current = watchedTokens;
 
-    prevConnectionStateRef.current = currentState;
-
-    // Block fetch if not on BSC
-    if (isConnected && chainId !== null && !isOnBSC) {
-      setError('Please switch to Binance Smart Chain (BSC) to view wallet balances');
-      setIsLoading(false);
-      return;
+      if (isReady && !isPaused && liveUpdatesEnabled) {
+        fetchBalances();
+      }
     }
+  }, [account, chainId, watchedTokens, isReady, isPaused, liveUpdatesEnabled]);
 
-    // Skip if still detecting network
-    if (isDetectingNetwork) {
-      return;
-    }
-
-    // Fetch on meaningful transitions
-    if (nowOnBSC && (justConnected || networkChanged || accountChanged)) {
-      setIsLoading(true);
-      fetchAllBalances().finally(() => setIsLoading(false));
-    }
-  }, [isConnected, chainId, account, isOnBSC, isDetectingNetwork, fetchAllBalances]);
-
-  // Polling effect
+  // Effect: Polling (every 30 seconds)
   useEffect(() => {
-    if (!enablePolling || !liveUpdatesEnabled || !isConnected || !isOnBSC || isDetectingNetwork) {
-      return;
-    }
+    if (!isReady || isPaused || !liveUpdatesEnabled) return;
 
     const interval = setInterval(() => {
-      fetchAllBalances();
-    }, POLL_INTERVAL);
+      fetchBalances();
+    }, 30000);
 
     return () => clearInterval(interval);
-  }, [enablePolling, liveUpdatesEnabled, isConnected, isOnBSC, isDetectingNetwork, fetchAllBalances]);
+  }, [isReady, isPaused, liveUpdatesEnabled, watchedTokens]);
 
   return {
     bnbBalance,
@@ -252,7 +192,9 @@ export function useWalletBalances(enablePolling = true) {
     isLoading,
     isRefreshing,
     error,
-    refetch,
+    refetch: handleRefetch,
+    isPaused,
+    togglePause,
     lastUpdated,
     liveUpdatesEnabled,
     setLiveUpdatesEnabled,

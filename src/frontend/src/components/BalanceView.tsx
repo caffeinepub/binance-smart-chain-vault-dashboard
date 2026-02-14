@@ -1,4 +1,4 @@
-import { RefreshCw, Pause, Play, Trash2, Info } from 'lucide-react';
+import { RefreshCw, Pause, Play, Trash2, Info, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -7,6 +7,7 @@ import { Separator } from '@/components/ui/separator';
 import { useVaultBalances } from '@/hooks/useVaultBalances';
 import { useBalanceValuations } from '@/hooks/useBalanceValuations';
 import { VaultBalancesTable } from './VaultBalancesTable';
+import { useWeb3 } from '@/hooks/useWeb3';
 
 interface BalanceViewProps {
   onRefresh?: () => void;
@@ -14,6 +15,7 @@ interface BalanceViewProps {
 }
 
 export function BalanceView({ onRefresh, onToggleLiveUpdates }: BalanceViewProps) {
+  const { chainId } = useWeb3();
   const {
     bnbBalance,
     bnbBalanceRaw,
@@ -29,6 +31,8 @@ export function BalanceView({ onRefresh, onToggleLiveUpdates }: BalanceViewProps
     setLiveUpdatesEnabled,
     clearMetadataCache,
     metadataCacheSize,
+    hasWatchedTokens,
+    tokenErrorCount,
   } = useVaultBalances();
 
   const { bnbValuation, tokenValuations, isLoading: isLoadingPrices } = useBalanceValuations(
@@ -46,6 +50,8 @@ export function BalanceView({ onRefresh, onToggleLiveUpdates }: BalanceViewProps
     setLiveUpdatesEnabled(newValue);
     onToggleLiveUpdates?.(newValue);
   };
+
+  const isOnBSC = chainId === 56;
 
   if (isLoading) {
     return (
@@ -120,11 +126,19 @@ export function BalanceView({ onRefresh, onToggleLiveUpdates }: BalanceViewProps
             )}
           </CardDescription>
         </CardHeader>
-        {(error || bnbFallbackUsed) && (
-          <CardContent className="pt-0">
+        {(error || bnbFallbackUsed || !isOnBSC) && (
+          <CardContent className="pt-0 space-y-2">
             {error && (
-              <Alert variant="destructive" className="mb-2">
+              <Alert variant="destructive">
                 <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+            {!isOnBSC && (
+              <Alert className="border-amber-500/30 bg-amber-500/5">
+                <AlertTriangle className="h-4 w-4 text-amber-500" />
+                <AlertDescription className="text-sm">
+                  Wrong network detected. Please switch to BSC (BNB Smart Chain) to view vault balances.
+                </AlertDescription>
               </Alert>
             )}
             {bnbFallbackUsed && !error && (
@@ -146,6 +160,8 @@ export function BalanceView({ onRefresh, onToggleLiveUpdates }: BalanceViewProps
         tokenBalances={tokenBalances}
         tokenValuations={tokenValuations}
         isLoadingPrices={isLoadingPrices}
+        hasWatchedTokens={hasWatchedTokens}
+        tokenErrorCount={tokenErrorCount}
       />
     </div>
   );
